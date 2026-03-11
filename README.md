@@ -46,16 +46,6 @@ for module in a2l.modules:
         print(" ", measurement.name, measurement.conversion)
 ```
 
-## Notes
-
-- The Rust package in this repository is named `pya2lfile`.
-- The published PyPI package is `nira-py-a2lfile`.
-- The runtime import name remains `a2lfile`.
-- This repository no longer contains the upstream Rust implementation source; it wraps the published `a2lfile` crate instead.
-
 ## License
 
-Licensed under either of
-
-- Apache License, Version 2.0 ([`LICENSE-APACHE`](./LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
 - MIT license ([`LICENSE-MIT`](./LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
