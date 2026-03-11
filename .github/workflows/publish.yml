@@ -145,7 +145,7 @@ jobs:
       id-token: write
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/py-a2lfile/
+      url: https://test.pypi.org/project/nira-py-a2lfile/
 
     steps:
       - name: Download build artifacts

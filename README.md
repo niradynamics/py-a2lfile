@@ -1,10 +1,10 @@
-# `py-a2lfile`
+# `nira-py-a2lfile`
 
 [![Github Actions](https://github.com/Accelerox/a2lfile/actions/workflows/test.yml/badge.svg)](https://github.com/Accelerox/a2lfile/actions)
 [![codecov](https://codecov.io/gh/Accelerox/a2lfile/branch/main/graph/badge.svg)](https://codecov.io/gh/Accelerox/a2lfile)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue)](#license)
 
-`py-a2lfile` is a parse-only Python package built with maturin and PyO3 on top of the published Rust crate [`a2lfile`](https://crates.io/crates/a2lfile).
+`nira-py-a2lfile` is a parse-only Python package built with maturin and PyO3 on top of the published Rust crate [`a2lfile`](https://crates.io/crates/a2lfile).
 
 The Python API is intentionally small and read-only. It is aimed at loading A2L files, walking modules and measurements, inspecting conversion metadata such as `COMPU_METHOD`, and traversing generic `IF_DATA` for XCP-related extraction.
 
@@ -26,7 +26,7 @@ uv run maturin develop --uv
 ## Install
 
 ```bash
-pip install py-a2lfile
+pip install nira-py-a2lfile
 ```
 
 ```python
@@ -49,7 +49,7 @@ for module in a2l.modules:
 ## Notes
 
 - The Rust package in this repository is named `pya2lfile`.
-- The published PyPI package is `py-a2lfile`.
+- The published PyPI package is `nira-py-a2lfile`.
 - The runtime import name remains `a2lfile`.
 - This repository no longer contains the upstream Rust implementation source; it wraps the published `a2lfile` crate instead.
 

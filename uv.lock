@@ -60,7 +60,7 @@ wheels = [
 ]
 
 [[package]]
-name = "py-a2lfile"
+name = "nira-py-a2lfile"
 source = { editable = "." }
 
 [package.dev-dependencies]

@@ -3,7 +3,7 @@ requires = ["maturin>=1.10,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "py-a2lfile"
+name = "nira-py-a2lfile"
 dynamic = ["version"]
 description = "Parse-only Python bindings for the a2lfile Rust crate"
 readme = "README.md"
