@@ -95,7 +95,7 @@ jobs:
           path: dist
 
   publish:
-    name: Publish To TestPyPI
+    name: Publish To PyPI
     runs-on: ubuntu-latest
     needs:
       - linux
@@ -105,8 +105,8 @@ jobs:
       contents: read
       id-token: write
     environment:
-      name: testpypi
-      url: https://test.pypi.org/project/nira-py-a2lfile/
+      name: pypi
+      url: https://pypi.org/project/nira-py-a2lfile/
 
     steps:
       - name: Download build artifacts
@@ -116,4 +116,4 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Publish distributions
-        run: uv publish --trusted-publishing always --publish-url https://test.pypi.org/legacy/ --check-url https://test.pypi.org/simple/ dist-*/*
+        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/ dist-*/*
