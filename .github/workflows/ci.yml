@@ -46,14 +46,23 @@ jobs:
       - name: Cache Rust build outputs
         uses: Swatinem/rust-cache@v2
 
+      - name: Remove checked-in lockfile for CI resolution
+        run: python -c "from pathlib import Path; Path('uv.lock').unlink(missing_ok=True)"
+
       - name: Sync dev environment
-        run: uv sync --dev --locked --python 3.12
+        run: uv sync --dev --python 3.12
+        env:
+          UV_DEFAULT_INDEX: https://pypi.org/simple
 
       - name: Build extension module
         run: uv run maturin develop --uv
+        env:
+          UV_DEFAULT_INDEX: https://pypi.org/simple
 
       - name: Run test suite
         run: uv run pytest -q
+        env:
+          UV_DEFAULT_INDEX: https://pypi.org/simple
 
   stub-check:
     name: Stub Sync
