@@ -66,44 +66,6 @@ jobs:
           name: dist-windows-x64
           path: dist
 
-  # macos:
-  #   name: macOS Wheel (${{ matrix.target }})
-  #   runs-on: ${{ matrix.runner }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         - runner: macos-13
-  #           target: x86_64
-  #           artifact: dist-macos-x86_64
-  #         - runner: macos-14
-  #           target: aarch64
-  #           artifact: dist-macos-aarch64
-  #
-  #   steps:
-  #     - name: Check out repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Set up Python 3.12
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: "3.12"
-  #
-  #     - name: Set release version from tag
-  #       run: python scripts/set_release_version.py "${{ github.ref_name }}"
-  #
-  #     - name: Build wheel
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         args: --release --out dist -i python
-  #
-  #     - name: Upload wheel artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: ${{ matrix.artifact }}
-  #         path: dist
-
   sdist:
     name: Source Distribution
     runs-on: ubuntu-latest
