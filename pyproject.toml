@@ -13,6 +13,9 @@ authors = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/niradynamics/py-a2lfile"
+
 [dependency-groups]
 dev = [
     "maturin>=1.10,<2.0",
