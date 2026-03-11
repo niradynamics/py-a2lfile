@@ -1,0 +1,103 @@
+version = 1
+revision = 3
+requires-python = "==3.12.*"
+
+[[package]]
+name = "colorama"
+version = "0.4.6"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/colorama/0.4.6/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/colorama/0.4.6/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6" },
+]
+
+[[package]]
+name = "iniconfig"
+version = "2.3.0"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/iniconfig/2.3.0/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/iniconfig/2.3.0/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12" },
+]
+
+[[package]]
+name = "maturin"
+version = "1.12.6"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6.tar.gz", hash = "sha256:d37be3a811a7f2ee28a0fa0964187efa50e90f21da0c6135c27787fa0b6a89db" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-linux_armv6l.whl", hash = "sha256:6892b4176992fcc143f9d1c1c874a816e9a041248eef46433db87b0f0aff4278" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:c0c742beeeef7fb93b6a81bd53e75507887e396fd1003c45117658d063812dad" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:2cb41139295eed6411d3cdafc7430738094c2721f34b7eeb44f33cac516115dc" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_12_i686.manylinux2010_i686.musllinux_1_1_i686.whl", hash = "sha256:351f3af1488a7cbdcff3b6d8482c17164273ac981378a13a4a9937a49aec7d71" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:6dbddfe4dc7ddee60bbac854870bd7cfec660acb54d015d24597d59a1c828f61" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:8fdb0f63e77ee3df0f027a120e9af78dbc31edf0eb0f263d55783c250c33b728" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.musllinux_1_1_armv7l.whl", hash = "sha256:fa84b7493a2e80759cacc2e668fa5b444d55b9994e90707c42904f55d6322c1e" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.musllinux_1_1_ppc64le.whl", hash = "sha256:e90dc12bc6a38e9495692a36c9e231c4d7e0c9bfde60719468ab7d8673db3c45" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:06fc8d089f98623ce924c669b70911dfed30f9a29956c362945f727f9abc546b" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-manylinux_2_31_riscv64.musllinux_1_1_riscv64.whl", hash = "sha256:75133e56274d43b9227fd49dca9a86e32f1fd56a7b55544910c4ce978c2bb5aa" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-win32.whl", hash = "sha256:3f32e0a3720b81423c9d35c14e728cb1f954678124749776dc72d533ea1115e8" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-win_amd64.whl", hash = "sha256:977290159d252db946054a0555263c59b3d0c7957135c69e690f4b1558ee9983" },
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/maturin/1.12.6/maturin-1.12.6-py3-none-win_arm64.whl", hash = "sha256:bae91976cdc8148038e13c881e1e844e5c63e58e026e8b9945aa2d19b3b4ae89" },
+]
+
+[[package]]
+name = "packaging"
+version = "26.0"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/packaging/26.0/packaging-26.0.tar.gz", hash = "sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/packaging/26.0/packaging-26.0-py3-none-any.whl", hash = "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529" },
+]
+
+[[package]]
+name = "pluggy"
+version = "1.6.0"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pluggy/1.6.0/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pluggy/1.6.0/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746" },
+]
+
+[[package]]
+name = "py-a2lfile"
+source = { editable = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "maturin" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "maturin", specifier = ">=1.10,<2.0" },
+    { name = "pytest", specifier = ">=8.4" },
+]
+
+[[package]]
+name = "pygments"
+version = "2.19.2"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pygments/2.19.2/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pygments/2.19.2/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b" },
+]
+
+[[package]]
+name = "pytest"
+version = "9.0.2"
+source = { registry = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+    { name = "pluggy" },
+    { name = "pygments" },
+]
+sdist = { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pytest/9.0.2/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11" }
+wheels = [
+    { url = "https://nexus-read.niradynamics.se/repository/nira_pypi_proxy/packages/pytest/9.0.2/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b" },
+]

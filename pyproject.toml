@@ -1,0 +1,33 @@
+[build-system]
+requires = ["maturin>=1.10,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "py-a2lfile"
+dynamic = ["version"]
+description = "Parse-only Python bindings for the a2lfile Rust crate"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Max Idermark", email = "max@idermark.com" },
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "maturin>=1.10,<2.0",
+    "pytest>=8.4",
+]
+
+[tool.maturin]
+bindings = "pyo3"
+manifest-path = "Cargo.toml"
+python-source = "python"
+module-name = "a2lfile._a2lfile"
+include = [
+    "a2lfile/_a2lfile.pyi",
+    "a2lfile/py.typed",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
