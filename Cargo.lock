@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "pya2lfile"
-version = "3.3.2"
+version = "0.0.1"
 dependencies = [
  "a2lfile",
  "pyo3",

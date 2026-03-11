@@ -1,0 +1,158 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Linux Wheel
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set release version from tag
+        run: python scripts/set_release_version.py "${{ github.ref_name }}"
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64
+          manylinux: auto
+          args: --release --out dist -i python3.12
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux-x86_64
+          path: dist
+
+  windows:
+    name: Windows Wheel
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set release version from tag
+        run: python scripts/set_release_version.py "${{ github.ref_name }}"
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: x64
+          args: --release --out dist -i python
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows-x64
+          path: dist
+
+  macos:
+    name: macOS Wheel (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            target: x86_64
+            artifact: dist-macos-x86_64
+          - runner: macos-14
+            target: aarch64
+            artifact: dist-macos-aarch64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set release version from tag
+        run: python scripts/set_release_version.py "${{ github.ref_name }}"
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist -i python
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
+
+  sdist:
+    name: Source Distribution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set release version from tag
+        run: python scripts/set_release_version.py "${{ github.ref_name }}"
+
+      - name: Build source distribution
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist
+
+  publish:
+    name: Publish To PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - linux
+      - windows
+      - macos
+      - sdist
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/project/py-a2lfile/
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Publish distributions
+        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple dist-*/*

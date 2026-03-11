@@ -1,14 +1,14 @@
 [package]
 name = "pya2lfile"
-version = "3.3.2"
-authors = ["Max Idermark <max@idermark.com>", "Daniel Thaler <daniel@dthaler.de>"]
+version = "0.0.1"
+authors = ["Max Idermark <max@idermark.com>"]
 edition = "2024"
-description = "Python bindings wrapper around the published a2lfile crate"
+description = "Python bindings for the crate a2lfile"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 keywords = ["a2l", "file", "file-format", "ASAM-MCD-2MC"]
 categories = ["parser-implementations"]
-repository = "https://github.com/Accelerox/a2lfile"
+repository = "https://github.com/niradynamics/py-a2lfile"
 rust-version = "1.88"
 
 [lib]
