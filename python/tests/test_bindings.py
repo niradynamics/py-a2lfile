@@ -134,8 +134,8 @@ def test_import_exposes_version() -> None:
     assert a2lfile.__version__
 
 
-def test_distribution_name_is_nira_py_a2lfile() -> None:
-    assert importlib.metadata.version("nira-py-a2lfile") == a2lfile.__version__
+def test_distribution_name_is_py_a2lfile() -> None:
+    assert importlib.metadata.version("py-a2lfile") == a2lfile.__version__
 
 
 def test_typing_artifacts_are_present() -> None:

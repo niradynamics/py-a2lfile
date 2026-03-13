@@ -1,9 +1,9 @@
-# `nira-py-a2lfile`
+# `py-a2lfile`
 
 [![CI](https://github.com/niradynamics/py-a2lfile/actions/workflows/ci.yml/badge.svg)](https://github.com/niradynamics/py-a2lfile/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue)](#license)
 
-`nira-py-a2lfile` is a Python wrapper around the Rust crate [`a2lfile`](https://crates.io/crates/a2lfile). It provides a small, read-only API for loading and inspecting A2L files from Python while relying on the upstream Rust implementation for parsing performance and stability.
+`py-a2lfile` is a Python wrapper around the Rust crate [`a2lfile`](https://crates.io/crates/a2lfile). It provides a small, read-only API for loading and inspecting A2L files from Python while relying on the upstream Rust implementation for parsing performance and stability.
 
 ## Current Capabilities
 
@@ -28,10 +28,10 @@
 ## Installation
 
 ```bash
-pip install nira-py-a2lfile
+pip install py-a2lfile
 ```
 
-The package is installed from PyPI as `nira-py-a2lfile`, but imported in Python as `a2lfile`.
+The package is installed from PyPI as `py-a2lfile`, but imported in Python as `a2lfile`.
 
 ## Example
 
@@ -46,18 +46,12 @@ for module in a2l.modules:
         print(" ", measurement.name, measurement.conversion)
 ```
 
-## Package Naming
-
-- PyPI distribution name: `nira-py-a2lfile`
-- Python import name: `a2lfile`
-- Rust crate in this repository: `pya2lfile`
-
 ## Development
 
 ```bash
 uv sync --dev --python python3.12
 uv run maturin develop --uv
-.venv/bin/pytest -q
+uv run pytest
 ```
 
 ## Acknowledgements
