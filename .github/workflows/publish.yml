@@ -28,14 +28,43 @@ jobs:
       - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64
-          manylinux: auto
+          target: x86_64-unknown-linux-gnu
+          manylinux: "2014"
           args: --release --out dist -i python3.12
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-linux-x86_64
+          path: dist
+
+  linux-aarch64:
+    name: Linux Wheel (aarch64)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set release version from tag
+        run: python scripts/set_release_version.py "${{ github.ref_name }}"
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          target: aarch64-unknown-linux-gnu
+          manylinux: "2014"
+          args: --release --out dist -i python3.12
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux-aarch64
           path: dist
 
   windows:
@@ -99,6 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - linux
+      - linux-aarch64
       - windows
       - sdist
     permissions:
