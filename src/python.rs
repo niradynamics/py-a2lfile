@@ -31,45 +31,49 @@ fn map_a2l_error(err: a2lfile_core::A2lError) -> PyErr {
 
 #[derive(Clone)]
 struct ModuleLookupContext {
-    compu_methods: a2lfile_core::ItemList<RustCompuMethod>,
-    compu_tabs: a2lfile_core::ItemList<RustCompuTab>,
-    compu_vtabs: a2lfile_core::ItemList<RustCompuVtab>,
-    compu_vtab_ranges: a2lfile_core::ItemList<RustCompuVtabRange>,
-    units: a2lfile_core::ItemList<RustUnit>,
-}
-
-impl From<&RustModule> for ModuleLookupContext {
-    fn from(module: &RustModule) -> Self {
-        Self {
-            compu_methods: module.compu_method.clone(),
-            compu_tabs: module.compu_tab.clone(),
-            compu_vtabs: module.compu_vtab.clone(),
-            compu_vtab_ranges: module.compu_vtab_range.clone(),
-            units: module.unit.clone(),
-        }
-    }
+    a2l: Arc<RustA2lFile>,
+    module_index: usize,
 }
 
 impl ModuleLookupContext {
+    fn new(a2l: Arc<RustA2lFile>, module_index: usize) -> Self {
+        Self { a2l, module_index }
+    }
+
+    fn module(&self) -> &RustModule {
+        // Resolve module data on demand so nested views can share the parsed file.
+        self.a2l
+            .project
+            .module
+            .iter()
+            .nth(self.module_index)
+            .expect("module index should stay valid for the lifetime of the parsed file")
+    }
+
+    fn resolve_measurement(&self, name: &str) -> Option<&RustMeasurement> {
+        self.module().measurement.get(name)
+    }
+
     fn resolve_compu_method(&self, name: &str) -> Option<RustCompuMethod> {
         if name == "NO_COMPU_METHOD" {
             return None;
         }
-        self.compu_methods.get(name).cloned()
+        self.module().compu_method.get(name).cloned()
     }
 
     fn resolve_unit(&self, name: &str) -> Option<RustUnit> {
-        self.units.get(name).cloned()
+        self.module().unit.get(name).cloned()
     }
 
     fn resolve_table(&self, name: &str) -> Option<ResolvedCompuTable> {
-        if let Some(compu_tab) = self.compu_tabs.get(name) {
+        // Resolve referenced conversion tables lazily from the shared module data.
+        if let Some(compu_tab) = self.module().compu_tab.get(name) {
             return Some(ResolvedCompuTable::CompuTab(compu_tab.clone()));
         }
-        if let Some(compu_vtab) = self.compu_vtabs.get(name) {
+        if let Some(compu_vtab) = self.module().compu_vtab.get(name) {
             return Some(ResolvedCompuTable::CompuVtab(compu_vtab.clone()));
         }
-        if let Some(compu_vtab_range) = self.compu_vtab_ranges.get(name) {
+        if let Some(compu_vtab_range) = self.module().compu_vtab_range.get(name) {
             return Some(ResolvedCompuTable::CompuVtabRange(compu_vtab_range.clone()));
         }
         None
@@ -99,7 +103,7 @@ fn wrap_resolved_table(
 
 fn wrap_resolved_table_by_name(
     py: Python<'_>,
-    lookup: Arc<ModuleLookupContext>,
+    lookup: &ModuleLookupContext,
     name: &str,
 ) -> PyResult<Option<Py<PyAny>>> {
     lookup
@@ -112,7 +116,7 @@ fn wrap_resolved_table_by_name(
 #[pyclass(name = "A2lFile", module = "a2lfile._a2lfile")]
 #[derive(Clone)]
 struct PyA2lFile {
-    inner: RustA2lFile,
+    inner: Arc<RustA2lFile>,
 }
 
 #[gen_stub_pymethods]
@@ -121,12 +125,13 @@ impl PyA2lFile {
     #[gen_stub(override_return_type(type_repr = "list[Module]"))]
     #[getter]
     fn modules(&self) -> Vec<PyModuleView> {
+        // Expose lightweight module views so Python does not duplicate the full parse tree.
         self.inner
             .project
             .module
             .iter()
-            .cloned()
-            .map(Into::into)
+            .enumerate()
+            .map(|(module_index, _)| PyModuleView::new(Arc::clone(&self.inner), module_index))
             .collect()
     }
 
@@ -140,14 +145,31 @@ impl PyA2lFile {
 #[pyclass(name = "Module", module = "a2lfile._a2lfile")]
 #[derive(Clone)]
 struct PyModuleView {
-    inner: RustModule,
-    lookup: Arc<ModuleLookupContext>,
+    a2l: Arc<RustA2lFile>,
+    module_index: usize,
 }
 
-impl From<RustModule> for PyModuleView {
-    fn from(inner: RustModule) -> Self {
-        let lookup = Arc::new(ModuleLookupContext::from(&inner));
-        Self { inner, lookup }
+impl PyModuleView {
+    fn new(a2l: Arc<RustA2lFile>, module_index: usize) -> Self {
+        Self { a2l, module_index }
+    }
+
+    fn inner(&self) -> &RustModule {
+        // Resolve the module on demand from the shared parsed file instead of storing a clone.
+        self.a2l
+            .project
+            .module
+            .iter()
+            .nth(self.module_index)
+            .expect("module index should stay valid for the lifetime of the parsed file")
+    }
+
+    fn lookup(&self) -> Arc<ModuleLookupContext> {
+        // Nested views share a lightweight module locator instead of cloned lookup tables.
+        Arc::new(ModuleLookupContext::new(
+            Arc::clone(&self.a2l),
+            self.module_index,
+        ))
     }
 }
 
@@ -156,41 +178,44 @@ impl From<RustModule> for PyModuleView {
 impl PyModuleView {
     #[getter]
     fn name(&self) -> String {
-        self.inner.get_name().to_string()
+        self.inner().get_name().to_string()
     }
 
     #[getter]
     fn long_identifier(&self) -> String {
-        self.inner.long_identifier.clone()
+        self.inner().long_identifier.clone()
     }
 
     #[gen_stub(override_return_type(type_repr = "list[Measurement]"))]
     #[getter]
     fn measurements(&self) -> Vec<PyMeasurementView> {
-        self.inner
+        // Reuse one lookup context for the full returned measurement list.
+        let lookup = self.lookup();
+        self.inner()
             .measurement
             .iter()
-            .cloned()
-            .map(|inner| PyMeasurementView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyMeasurementView::new(inner.get_name().to_string(), Arc::clone(&lookup)))
             .collect()
     }
 
     #[gen_stub(override_return_type(type_repr = "list[CompuMethod]"))]
     #[getter]
     fn compu_methods(&self) -> Vec<PyCompuMethodView> {
-        self.lookup
-            .compu_methods
+        // Reuse one lookup context for the full returned conversion list.
+        let lookup = self.lookup();
+        self.inner()
+            .compu_method
             .iter()
             .cloned()
-            .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&lookup)))
             .collect()
     }
 
     #[gen_stub(override_return_type(type_repr = "list[CompuTab]"))]
     #[getter]
     fn compu_tabs(&self) -> Vec<PyCompuTabView> {
-        self.lookup
-            .compu_tabs
+        self.inner()
+            .compu_tab
             .iter()
             .cloned()
             .map(PyCompuTabView::new)
@@ -200,8 +225,8 @@ impl PyModuleView {
     #[gen_stub(override_return_type(type_repr = "list[CompuVtab]"))]
     #[getter]
     fn compu_vtabs(&self) -> Vec<PyCompuVtabView> {
-        self.lookup
-            .compu_vtabs
+        self.inner()
+            .compu_vtab
             .iter()
             .cloned()
             .map(PyCompuVtabView::new)
@@ -211,8 +236,8 @@ impl PyModuleView {
     #[gen_stub(override_return_type(type_repr = "list[CompuVtabRange]"))]
     #[getter]
     fn compu_vtab_ranges(&self) -> Vec<PyCompuVtabRangeView> {
-        self.lookup
-            .compu_vtab_ranges
+        self.inner()
+            .compu_vtab_range
             .iter()
             .cloned()
             .map(PyCompuVtabRangeView::new)
@@ -222,23 +247,25 @@ impl PyModuleView {
     #[gen_stub(override_return_type(type_repr = "list[Unit]"))]
     #[getter]
     fn units(&self) -> Vec<PyUnitView> {
-        self.lookup
-            .units
+        // Reuse one lookup context for the full returned unit list.
+        let lookup = self.lookup();
+        self.inner()
+            .unit
             .iter()
             .cloned()
-            .map(|inner| PyUnitView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyUnitView::new(inner, Arc::clone(&lookup)))
             .collect()
     }
 
     #[gen_stub(override_return_type(type_repr = "list[IfData]"))]
     #[getter]
     fn if_data(&self) -> Vec<PyIfDataView> {
-        self.inner.if_data.iter().cloned().map(Into::into).collect()
+        self.inner().if_data.iter().cloned().map(Into::into).collect()
     }
 
     #[getter]
     fn mod_common_byte_order(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .mod_common
             .as_ref()
             .and_then(|value| value.byte_order.as_ref())
@@ -247,7 +274,7 @@ impl PyModuleView {
 
     #[getter]
     fn mod_par_epk(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .mod_par
             .as_ref()
             .and_then(|value| value.epk.as_ref())
@@ -257,7 +284,7 @@ impl PyModuleView {
     #[gen_stub(override_return_type(type_repr = "list[int]"))]
     #[getter]
     fn mod_par_addr_epk(&self) -> Vec<u32> {
-        self.inner
+        self.inner()
             .mod_par
             .as_ref()
             .map(|value| value.addr_epk.iter().map(|addr| addr.address).collect())
@@ -266,40 +293,46 @@ impl PyModuleView {
 
     #[gen_stub(override_return_type(type_repr = "Measurement | None"))]
     fn get_measurement(&self, name: &str) -> Option<PyMeasurementView> {
-        self.inner
+        // Create lookup state only when returning a nested measurement view.
+        let lookup = self.lookup();
+        self.inner()
             .measurement
             .get(name)
-            .cloned()
-            .map(|inner| PyMeasurementView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyMeasurementView::new(inner.get_name().to_string(), lookup))
     }
 
     #[gen_stub(override_return_type(type_repr = "CompuMethod | None"))]
     fn get_compu_method(&self, name: &str) -> Option<PyCompuMethodView> {
-        self.lookup
+        // Resolve the conversion from shared module data, then attach the same lookup cache.
+        let lookup = self.lookup();
+        lookup
             .resolve_compu_method(name)
-            .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyCompuMethodView::new(inner, lookup))
     }
 
     #[gen_stub(override_return_type(type_repr = "Unit | None"))]
     fn get_unit(&self, name: &str) -> Option<PyUnitView> {
-        self.lookup
+        // Resolve the unit from shared module data, then attach the same lookup cache.
+        let lookup = self.lookup();
+        lookup
             .resolve_unit(name)
-            .map(|inner| PyUnitView::new(inner, Arc::clone(&self.lookup)))
+            .map(|inner| PyUnitView::new(inner, lookup))
     }
 
     #[gen_stub(
         override_return_type(type_repr = "CompuTab | CompuVtab | CompuVtabRange | None")
     )]
     fn get_compu_tab(&self, py: Python<'_>, name: &str) -> PyResult<Option<Py<PyAny>>> {
-        wrap_resolved_table_by_name(py, Arc::clone(&self.lookup), name)
+        let lookup = self.lookup();
+        wrap_resolved_table_by_name(py, &lookup, name)
     }
 
     #[gen_stub(skip)]
     fn __repr__(&self) -> String {
         format!(
             "Module(name={:?}, measurements={})",
-            self.inner.get_name(),
-            self.inner.measurement.len()
+            self.inner().get_name(),
+            self.inner().measurement.len()
         )
     }
 }
@@ -308,13 +341,20 @@ impl PyModuleView {
 #[pyclass(name = "Measurement", module = "a2lfile._a2lfile")]
 #[derive(Clone)]
 struct PyMeasurementView {
-    inner: RustMeasurement,
+    name: String,
     lookup: Arc<ModuleLookupContext>,
 }
 
 impl PyMeasurementView {
-    fn new(inner: RustMeasurement, lookup: Arc<ModuleLookupContext>) -> Self {
-        Self { inner, lookup }
+    fn new(name: String, lookup: Arc<ModuleLookupContext>) -> Self {
+        Self { name, lookup }
+    }
+
+    fn inner(&self) -> &RustMeasurement {
+        // Resolve measurement data by name so storing the Python view stays lightweight.
+        self.lookup
+            .resolve_measurement(&self.name)
+            .expect("measurement name should stay valid for the lifetime of the parsed file")
     }
 }
 
@@ -323,55 +363,55 @@ impl PyMeasurementView {
 impl PyMeasurementView {
     #[getter]
     fn name(&self) -> String {
-        self.inner.get_name().to_string()
+        self.name.clone()
     }
 
     #[getter]
     fn long_identifier(&self) -> String {
-        self.inner.long_identifier.clone()
+        self.inner().long_identifier.clone()
     }
 
     #[getter]
     fn datatype(&self) -> String {
-        format!("{:?}", self.inner.datatype)
+        format!("{:?}", self.inner().datatype)
     }
 
     #[getter]
     fn conversion(&self) -> String {
-        self.inner.conversion.clone()
+        self.inner().conversion.clone()
     }
 
     #[gen_stub(override_return_type(type_repr = "CompuMethod | None"))]
     #[getter]
     fn compu_method(&self) -> Option<PyCompuMethodView> {
         self.lookup
-            .resolve_compu_method(&self.inner.conversion)
+            .resolve_compu_method(&self.inner().conversion)
             .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&self.lookup)))
     }
 
     #[getter]
     fn resolution(&self) -> u16 {
-        self.inner.resolution
+        self.inner().resolution
     }
 
     #[getter]
     fn accuracy(&self) -> f64 {
-        self.inner.accuracy
+        self.inner().accuracy
     }
 
     #[getter]
     fn lower_limit(&self) -> f64 {
-        self.inner.lower_limit
+        self.inner().lower_limit
     }
 
     #[getter]
     fn upper_limit(&self) -> f64 {
-        self.inner.upper_limit
+        self.inner().upper_limit
     }
 
     #[getter]
     fn address_type(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .address_type
             .as_ref()
             .map(|value| value.address_type.to_string())
@@ -380,7 +420,7 @@ impl PyMeasurementView {
     #[gen_stub(override_return_type(type_repr = "list[Annotation]"))]
     #[getter]
     fn annotation(&self) -> Vec<PyAnnotationView> {
-        self.inner
+        self.inner()
             .annotation
             .iter()
             .cloned()
@@ -390,23 +430,23 @@ impl PyMeasurementView {
 
     #[getter]
     fn array_size(&self) -> Option<u16> {
-        self.inner.array_size.as_ref().map(|value| value.number)
+        self.inner().array_size.as_ref().map(|value| value.number)
     }
 
     #[getter]
     fn bit_mask(&self) -> Option<u64> {
-        self.inner.bit_mask.as_ref().map(|value| value.mask)
+        self.inner().bit_mask.as_ref().map(|value| value.mask)
     }
 
     #[gen_stub(override_return_type(type_repr = "BitOperation | None"))]
     #[getter]
     fn bit_operation(&self) -> Option<PyBitOperationView> {
-        self.inner.bit_operation.clone().map(Into::into)
+        self.inner().bit_operation.clone().map(Into::into)
     }
 
     #[getter]
     fn byte_order(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .byte_order
             .as_ref()
             .map(|value| value.byte_order.to_string())
@@ -414,12 +454,12 @@ impl PyMeasurementView {
 
     #[getter]
     fn discrete(&self) -> bool {
-        self.inner.discrete.is_some()
+        self.inner().discrete.is_some()
     }
 
     #[getter]
     fn display_identifier(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .display_identifier
             .as_ref()
             .map(|value| value.display_name.clone())
@@ -427,12 +467,12 @@ impl PyMeasurementView {
 
     #[getter]
     fn ecu_address(&self) -> Option<u32> {
-        self.inner.ecu_address.as_ref().map(|value| value.address)
+        self.inner().ecu_address.as_ref().map(|value| value.address)
     }
 
     #[getter]
     fn ecu_address_extension(&self) -> Option<i16> {
-        self.inner
+        self.inner()
             .ecu_address_extension
             .as_ref()
             .map(|value| value.extension)
@@ -440,12 +480,12 @@ impl PyMeasurementView {
 
     #[getter]
     fn error_mask(&self) -> Option<u64> {
-        self.inner.error_mask.as_ref().map(|value| value.mask)
+        self.inner().error_mask.as_ref().map(|value| value.mask)
     }
 
     #[getter]
     fn format(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .format
             .as_ref()
             .map(|value| value.format_string.clone())
@@ -453,7 +493,7 @@ impl PyMeasurementView {
 
     #[getter]
     fn function_list(&self) -> Option<Vec<String>> {
-        self.inner
+        self.inner()
             .function_list
             .as_ref()
             .map(|value| value.name_list.clone())
@@ -462,12 +502,12 @@ impl PyMeasurementView {
     #[gen_stub(override_return_type(type_repr = "list[IfData]"))]
     #[getter]
     fn if_data(&self) -> Vec<PyIfDataView> {
-        self.inner.if_data.iter().cloned().map(Into::into).collect()
+        self.inner().if_data.iter().cloned().map(Into::into).collect()
     }
 
     #[getter]
     fn layout(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .layout
             .as_ref()
             .map(|value| value.index_mode.to_string())
@@ -475,7 +515,7 @@ impl PyMeasurementView {
 
     #[getter]
     fn matrix_dim(&self) -> Option<Vec<u16>> {
-        self.inner
+        self.inner()
             .matrix_dim
             .as_ref()
             .map(|value| value.dim_list.clone())
@@ -484,12 +524,12 @@ impl PyMeasurementView {
     #[gen_stub(override_return_type(type_repr = "MaxRefresh | None"))]
     #[getter]
     fn max_refresh(&self) -> Option<PyMaxRefreshView> {
-        self.inner.max_refresh.clone().map(Into::into)
+        self.inner().max_refresh.clone().map(Into::into)
     }
 
     #[getter]
     fn model_link(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .model_link
             .as_ref()
             .map(|value| value.model_link.clone())
@@ -497,7 +537,7 @@ impl PyMeasurementView {
 
     #[getter]
     fn phys_unit(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .phys_unit
             .as_ref()
             .map(|value| value.unit.clone())
@@ -505,12 +545,12 @@ impl PyMeasurementView {
 
     #[getter]
     fn read_write(&self) -> bool {
-        self.inner.read_write.is_some()
+        self.inner().read_write.is_some()
     }
 
     #[getter]
     fn ref_memory_segment(&self) -> Option<String> {
-        self.inner
+        self.inner()
             .ref_memory_segment
             .as_ref()
             .map(|value| value.name.clone())
@@ -519,12 +559,12 @@ impl PyMeasurementView {
     #[gen_stub(override_return_type(type_repr = "SymbolLink | None"))]
     #[getter]
     fn symbol_link(&self) -> Option<PySymbolLinkView> {
-        self.inner.symbol_link.clone().map(Into::into)
+        self.inner().symbol_link.clone().map(Into::into)
     }
 
     #[getter]
     fn r#virtual(&self) -> Option<Vec<String>> {
-        self.inner
+        self.inner()
             .var_virtual
             .as_ref()
             .map(|value| value.measuring_channel_list.clone())
@@ -534,8 +574,8 @@ impl PyMeasurementView {
     fn __repr__(&self) -> String {
         format!(
             "Measurement(name={:?}, datatype={:?})",
-            self.inner.get_name(),
-            format!("{:?}", self.inner.datatype)
+            self.name,
+            format!("{:?}", self.inner().datatype)
         )
     }
 }
@@ -1011,7 +1051,7 @@ impl PyCompuMethodView {
         if let Some(compu_tab_ref) = &self.inner.compu_tab_ref {
             return wrap_resolved_table_by_name(
                 py,
-                Arc::clone(&self.lookup),
+                &self.lookup,
                 &compu_tab_ref.conversion_table,
             );
         }
@@ -1535,7 +1575,10 @@ impl PyGenericIfDataTaggedItemView {
 #[pyfunction(signature = (path, a2ml_spec=None))]
 fn load(path: String, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
     let (a2l_file, _) = a2lfile_core::load(path, a2ml_spec, false).map_err(map_a2l_error)?;
-    Ok(PyA2lFile { inner: a2l_file })
+    Ok(PyA2lFile {
+        // Keep the parsed file shared across Python views instead of duplicating modules.
+        inner: Arc::new(a2l_file),
+    })
 }
 
 #[gen_stub_pyfunction]
@@ -1543,7 +1586,10 @@ fn load(path: String, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
 fn load_from_string(text: &str, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
     let (a2l_file, _) =
         a2lfile_core::load_from_string(text, a2ml_spec, false).map_err(map_a2l_error)?;
-    Ok(PyA2lFile { inner: a2l_file })
+    Ok(PyA2lFile {
+        // Keep the parsed file shared across Python views instead of duplicating modules.
+        inner: Arc::new(a2l_file),
+    })
 }
 
 #[pymodule]
