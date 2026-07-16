@@ -15,9 +15,9 @@ rust-version = "1.88"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-a2lfile_core = { package = "a2lfile", version = "=3.3.2", default-features = false }
-pyo3 = { version = "0.27.1", features = ["extension-module"] }
-pyo3-stub-gen = { version = "0.17.2", default-features = false, features = ["infer_signature"] }
+a2lfile_core = { package = "a2lfile", version = "=3.5.0", default-features = false }
+pyo3 = { version = "0.29.0", features = ["extension-module"] }
+pyo3-stub-gen = { version = "0.23.0", default-features = false, features = ["infer_signature"] }
 
 [[bin]]
 name = "stub_gen"

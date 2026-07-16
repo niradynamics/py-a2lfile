@@ -113,7 +113,7 @@ fn wrap_resolved_table_by_name(
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "A2lFile", module = "a2lfile._a2lfile")]
+#[pyclass(name = "A2lFile", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyA2lFile {
     inner: Arc<RustA2lFile>,
@@ -142,7 +142,7 @@ impl PyA2lFile {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Module", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Module", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyModuleView {
     a2l: Arc<RustA2lFile>,
@@ -338,7 +338,7 @@ impl PyModuleView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Measurement", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Measurement", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyMeasurementView {
     name: String,
@@ -581,7 +581,7 @@ impl PyMeasurementView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Annotation", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Annotation", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyAnnotationView {
     inner: RustAnnotation,
@@ -622,7 +622,7 @@ impl PyAnnotationView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "BitOperation", module = "a2lfile._a2lfile")]
+#[pyclass(name = "BitOperation", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyBitOperationView {
     inner: RustBitOperation,
@@ -654,7 +654,7 @@ impl PyBitOperationView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "MaxRefresh", module = "a2lfile._a2lfile")]
+#[pyclass(name = "MaxRefresh", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyMaxRefreshView {
     inner: RustMaxRefresh,
@@ -681,7 +681,7 @@ impl PyMaxRefreshView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "SymbolLink", module = "a2lfile._a2lfile")]
+#[pyclass(name = "SymbolLink", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PySymbolLinkView {
     inner: RustSymbolLink,
@@ -708,7 +708,7 @@ impl PySymbolLinkView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Coeffs", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Coeffs", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCoeffsView {
     inner: RustCoeffs,
@@ -755,7 +755,7 @@ impl PyCoeffsView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CoeffsLinear", module = "a2lfile._a2lfile")]
+#[pyclass(name = "CoeffsLinear", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCoeffsLinearView {
     inner: RustCoeffsLinear,
@@ -782,7 +782,7 @@ impl PyCoeffsLinearView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Formula", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Formula", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyFormulaView {
     inner: RustFormula,
@@ -809,7 +809,7 @@ impl PyFormulaView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "UnitConversion", module = "a2lfile._a2lfile")]
+#[pyclass(name = "UnitConversion", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyUnitConversionView {
     inner: RustUnitConversion,
@@ -836,7 +836,7 @@ impl PyUnitConversionView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "SiExponents", module = "a2lfile._a2lfile")]
+#[pyclass(name = "SiExponents", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PySiExponentsView {
     inner: RustSiExponents,
@@ -888,7 +888,7 @@ impl PySiExponentsView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Unit", module = "a2lfile._a2lfile")]
+#[pyclass(name = "Unit", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyUnitView {
     inner: RustUnit,
@@ -953,7 +953,7 @@ impl PyUnitView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuMethod", module = "a2lfile._a2lfile")]
+#[pyclass(name = "CompuMethod", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCompuMethodView {
     inner: RustCompuMethod,
@@ -1060,7 +1060,7 @@ impl PyCompuMethodView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "TabEntry", module = "a2lfile._a2lfile")]
+#[pyclass(name = "TabEntry", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyTabEntryView {
     inner: RustTabEntry,
@@ -1087,7 +1087,7 @@ impl PyTabEntryView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "ValuePair", module = "a2lfile._a2lfile")]
+#[pyclass(name = "ValuePair", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyValuePairView {
     inner: RustValuePair,
@@ -1114,7 +1114,7 @@ impl PyValuePairView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "ValueTriple", module = "a2lfile._a2lfile")]
+#[pyclass(name = "ValueTriple", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyValueTripleView {
     inner: RustValueTriple,
@@ -1146,7 +1146,7 @@ impl PyValueTripleView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuTab", module = "a2lfile._a2lfile")]
+#[pyclass(name = "CompuTab", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCompuTabView {
     inner: RustCompuTab,
@@ -1219,7 +1219,7 @@ impl PyCompuTabView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuVtab", module = "a2lfile._a2lfile")]
+#[pyclass(name = "CompuVtab", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCompuVtabView {
     inner: RustCompuVtab,
@@ -1275,7 +1275,7 @@ impl PyCompuVtabView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuVtabRange", module = "a2lfile._a2lfile")]
+#[pyclass(name = "CompuVtabRange", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyCompuVtabRangeView {
     inner: RustCompuVtabRange,
@@ -1326,7 +1326,7 @@ impl PyCompuVtabRangeView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "IfData", module = "a2lfile._a2lfile")]
+#[pyclass(name = "IfData", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyIfDataView {
     inner: RustIfData,
@@ -1363,7 +1363,7 @@ impl PyIfDataView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "GenericIfData", module = "a2lfile._a2lfile")]
+#[pyclass(name = "GenericIfData", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyGenericIfDataView {
     inner: GenericIfData,
@@ -1521,7 +1521,7 @@ impl PyGenericIfDataView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "GenericIfDataTaggedItem", module = "a2lfile._a2lfile")]
+#[pyclass(name = "GenericIfDataTaggedItem", module = "a2lfile._a2lfile", skip_from_py_object)]
 #[derive(Clone)]
 struct PyGenericIfDataTaggedItemView {
     inner: GenericIfDataTaggedItem,
