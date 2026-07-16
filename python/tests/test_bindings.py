@@ -94,6 +94,7 @@ ASAP2_VERSION 1 71
         SIGN_EXTEND
       /end BIT_OPERATION
       BYTE_ORDER MSB_LAST
+      ADDRESS_TYPE DIRECT
       DISCRETE
       DISPLAY_IDENTIFIER TempDisplay
       ECU_ADDRESS 0x1000
@@ -147,9 +148,27 @@ def test_typing_artifacts_are_present() -> None:
 
     stub_text = stub_path.read_text(encoding="utf-8")
     assert "class A2lFile" in stub_text
+    assert "class DataType(enum.Enum)" in stub_text
     assert "class CompuMethod" in stub_text
+    assert "def datatype(self) -> DataType" in stub_text
     assert "class Unit" in stub_text
     assert "def load(" in stub_text
+
+
+def test_native_enums_are_hashable() -> None:
+    # Confirm every public enum can be used as an immutable mapping key.
+    enum_members = (
+        a2lfile.AddrType.Direct,
+        a2lfile.ByteOrderEnum.MsbFirst,
+        a2lfile.ConversionType.Linear,
+        a2lfile.DataType.Ubyte,
+        a2lfile.IndexMode.RowDir,
+        a2lfile.UnitType.Derived,
+    )
+
+    enum_lookup = {member: index for index, member in enumerate(enum_members)}
+    assert len(enum_lookup) == len(enum_members)
+    assert all(enum_lookup[member] == index for index, member in enumerate(enum_members))
 
 
 def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
@@ -166,6 +185,7 @@ def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
     measurement = module.measurements[0]
     assert measurement.name == "RPM"
     assert measurement.long_identifier == "Engine speed"
+    assert measurement.datatype is a2lfile.DataType.Ubyte
     assert measurement.conversion == "NO_COMPU_METHOD"
     assert measurement.resolution == 1
     assert measurement.lower_limit == 0.0
@@ -212,7 +232,7 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     assert len(module.compu_vtabs) == 1
     assert len(module.compu_vtab_ranges) == 1
     assert len(module.units) == 1
-    assert module.mod_common_byte_order == "MSB_FIRST"
+    assert module.mod_common_byte_order is a2lfile.ByteOrderEnum.MsbFirst
     assert module.mod_par_epk == "EPK_TAG"
     assert module.mod_par_addr_epk == [0x1234]
 
@@ -220,11 +240,13 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     assert isinstance(temp_linear, a2lfile.Measurement)
     assert temp_linear.compu_method is not None
     assert temp_linear.compu_method.name == "temp_linear"
-    assert temp_linear.compu_method.conversion_type == "LINEAR"
+    assert temp_linear.datatype is a2lfile.DataType.Sword
+    assert temp_linear.compu_method.conversion_type is a2lfile.ConversionType.Linear
     assert temp_linear.compu_method.coeffs_linear.a == 0.1
     assert temp_linear.compu_method.coeffs_linear.b == 0.0
     assert temp_linear.compu_method.referenced_unit.name == "temp_unit"
     assert temp_linear.compu_method.referenced_unit.display == "degC"
+    assert temp_linear.compu_method.referenced_unit.unit_type is a2lfile.UnitType.Derived
     assert temp_linear.compu_method.referenced_unit.unit_conversion.gradient == 1.0
     assert temp_linear.compu_method.referenced_unit.unit_conversion.offset == 0.0
 
@@ -235,7 +257,8 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     assert temp_linear.bit_operation.left_shift == 1
     assert temp_linear.bit_operation.right_shift == 2
     assert temp_linear.bit_operation.sign_extend is True
-    assert temp_linear.byte_order == "MSB_LAST"
+    assert temp_linear.address_type is a2lfile.AddrType.Direct
+    assert temp_linear.byte_order is a2lfile.ByteOrderEnum.MsbLast
     assert temp_linear.discrete is True
     assert temp_linear.display_identifier == "TempDisplay"
     assert temp_linear.ecu_address == 0x1000
@@ -243,7 +266,7 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     assert temp_linear.error_mask == 255
     assert temp_linear.format == "%8.3"
     assert temp_linear.function_list == ["fn_temp"]
-    assert temp_linear.layout == "ROW_DIR"
+    assert temp_linear.layout is a2lfile.IndexMode.RowDir
     assert temp_linear.matrix_dim == [1, 1, 1]
     assert temp_linear.max_refresh.scaling_unit == 1
     assert temp_linear.max_refresh.rate == 100
@@ -257,6 +280,7 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     temp_table = module.get_measurement("TEMP_TABLE")
     table = temp_table.compu_method.referenced_table
     assert isinstance(table, a2lfile.CompuTab)
+    assert table.conversion_type is a2lfile.ConversionType.TabNointp
     assert table.entries[1].in_val == 1.0
     assert table.entries[1].out_val == 10.0
     assert table.default_value_numeric == 99.0
@@ -264,6 +288,7 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
 
     status_table = module.get_measurement("STATUS_TABLE").compu_method.referenced_table
     assert isinstance(status_table, a2lfile.CompuVtab)
+    assert status_table.conversion_type is a2lfile.ConversionType.TabVerb
     assert status_table.entries[1].out_val == "on"
     assert status_table.default_value == "unknown"
 
