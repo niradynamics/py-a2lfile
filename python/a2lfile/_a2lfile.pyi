@@ -148,6 +148,10 @@ class GenericIfData:
     def items(self) -> list[GenericIfData] | None: ...
     @property
     def tagged_items(self) -> dict[str, list[GenericIfDataTaggedItem]] | None: ...
+    def get_tagged_items_by(self, tag: builtins.str) -> typing.Optional[builtins.list[GenericIfDataTaggedItem]]:
+        r"""
+        Return direct tagged entries for `tag` without converting the complete tag map.
+        """
 
 @typing.final
 class GenericIfDataTaggedItem:

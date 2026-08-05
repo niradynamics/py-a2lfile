@@ -152,6 +152,7 @@ def test_typing_artifacts_are_present() -> None:
     assert "class CompuMethod" in stub_text
     assert "def datatype(self) -> DataType" in stub_text
     assert "class Unit" in stub_text
+    assert "def get_tagged_items_by(" in stub_text
     assert "def load(" in stub_text
 
 
@@ -203,6 +204,10 @@ def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
     assert isinstance(xcp_item, a2lfile.GenericIfDataTaggedItem)
     assert xcp_item.tag == "XCP"
     assert xcp_item.is_block is True
+
+    assert [item.tag for item in tagged_root.get_tagged_items_by("XCP") or []] == ["XCP"]
+    assert tagged_root.get_tagged_items_by("NOT_PRESENT") == []
+    assert module_if_data.items.get_tagged_items_by("XCP") is None
 
     protocol_layer = xcp_item.data.items[0].tagged_items["PROTOCOL_LAYER"][0]
     assert protocol_layer.tag == "PROTOCOL_LAYER"

@@ -1743,6 +1743,26 @@ impl PyGenericIfDataView {
         }
     }
 
+    /// Return direct tagged entries for `tag` without converting the complete tag map.
+    #[gen_stub(override_return_type(type_repr = "list[GenericIfDataTaggedItem] | None"))]
+    fn get_tagged_items_by(&self, tag: &str) -> Option<Vec<PyGenericIfDataTaggedItemView>> {
+        match &self.inner {
+            GenericIfData::TaggedStruct(items) | GenericIfData::TaggedUnion(items) => {
+                // Look up only the requested direct child instead of converting the complete map.
+                Some(
+                    items
+                        .get(tag)
+                        .into_iter()
+                        .flatten()
+                        .cloned()
+                        .map(Into::into)
+                        .collect(),
+                )
+            }
+            _ => None,
+        }
+    }
+
     #[gen_stub(skip)]
     fn __repr__(&self) -> String {
         format!("GenericIfData(kind={:?})", self.kind())
