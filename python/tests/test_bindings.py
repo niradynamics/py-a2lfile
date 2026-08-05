@@ -172,6 +172,42 @@ def test_native_enums_are_hashable() -> None:
     assert all(enum_lookup[member] == index for index, member in enumerate(enum_members))
 
 
+def test_native_type_names_remain_stable() -> None:
+    public_class_names = (
+        "AddrType",
+        "A2lFile",
+        "Annotation",
+        "BitOperation",
+        "ByteOrderEnum",
+        "Coeffs",
+        "CoeffsLinear",
+        "CompuMethod",
+        "CompuTab",
+        "CompuVtab",
+        "CompuVtabRange",
+        "ConversionType",
+        "DataType",
+        "Formula",
+        "GenericIfData",
+        "GenericIfDataTaggedItem",
+        "IfData",
+        "IndexMode",
+        "MaxRefresh",
+        "Measurement",
+        "Module",
+        "SiExponents",
+        "SymbolLink",
+        "TabEntry",
+        "Unit",
+        "UnitConversion",
+        "UnitType",
+        "ValuePair",
+        "ValueTriple",
+    )
+
+    assert all(getattr(a2lfile, name).__name__ == name for name in public_class_names)
+
+
 def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
     parsed = a2lfile.load_from_string(TEST_A2L)
 

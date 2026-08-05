@@ -1,17 +1,18 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
-use pyo3::types::PyModule as PyModuleType;
+use pyo3::types::PyModule as PythonModule;
 use pyo3::wrap_pyfunction;
-use pyo3_stub_gen::define_stub_info_gatherer;
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pyfunction, gen_stub_pymethods,
 };
+use pyo3_stub_gen::{StubGenConfig, StubInfo};
 
 use a2lfile_core::{
     A2lFile as RustA2lFile, A2lObjectName, AddrType as RustAddrType, Annotation as RustAnnotation,
@@ -19,14 +20,15 @@ use a2lfile_core::{
     CoeffsLinear as RustCoeffsLinear, CompuMethod as RustCompuMethod, CompuTab as RustCompuTab,
     CompuVtab as RustCompuVtab, CompuVtabRange as RustCompuVtabRange,
     ConversionType as RustConversionType, DataType as RustDataType, Formula as RustFormula,
-    GenericIfData, GenericIfDataTaggedItem, IfData as RustIfData, IndexMode as RustIndexMode,
-    MaxRefresh as RustMaxRefresh, Measurement as RustMeasurement, Module as RustModule,
-    SiExponents as RustSiExponents, SymbolLink as RustSymbolLink, TabEntryStruct as RustTabEntry,
-    Unit as RustUnit, UnitConversion as RustUnitConversion, UnitType as RustUnitType,
+    GenericIfData as RustGenericIfData, GenericIfDataTaggedItem as RustGenericIfDataTaggedItem,
+    IfData as RustIfData, IndexMode as RustIndexMode, MaxRefresh as RustMaxRefresh,
+    Measurement as RustMeasurement, Module as RustModule, SiExponents as RustSiExponents,
+    SymbolLink as RustSymbolLink, TabEntryStruct as RustTabEntry, Unit as RustUnit,
+    UnitConversion as RustUnitConversion, UnitType as RustUnitType,
     ValuePairsStruct as RustValuePair, ValueTriplesStruct as RustValueTriple,
 };
 
-pyo3_stub_gen::module_variable!("a2lfile._a2lfile", "__version__", String);
+pyo3_stub_gen::module_variable!("_a2lfile", "__version__", String);
 
 fn map_a2l_error(err: a2lfile_core::A2lError) -> PyErr {
     PyException::new_err(err.to_string())
@@ -34,16 +36,9 @@ fn map_a2l_error(err: a2lfile_core::A2lError) -> PyErr {
 
 // Mirror the upstream unit enums so Python callers can use typed A2L values.
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "AddrType",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyAddrType {
+enum AddrType {
     Pbyte,
     Pword,
     Plong,
@@ -51,7 +46,7 @@ enum PyAddrType {
     Direct,
 }
 
-impl From<&RustAddrType> for PyAddrType {
+impl From<&RustAddrType> for AddrType {
     fn from(value: &RustAddrType) -> Self {
         match value {
             RustAddrType::Pbyte => Self::Pbyte,
@@ -64,16 +59,9 @@ impl From<&RustAddrType> for PyAddrType {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "ByteOrderEnum",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyByteOrderEnum {
+enum ByteOrderEnum {
     LittleEndian,
     BigEndian,
     MsbLast,
@@ -82,7 +70,7 @@ enum PyByteOrderEnum {
     MsbLastMswFirst,
 }
 
-impl From<&RustByteOrderEnum> for PyByteOrderEnum {
+impl From<&RustByteOrderEnum> for ByteOrderEnum {
     fn from(value: &RustByteOrderEnum) -> Self {
         match value {
             RustByteOrderEnum::LittleEndian => Self::LittleEndian,
@@ -96,16 +84,9 @@ impl From<&RustByteOrderEnum> for PyByteOrderEnum {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "ConversionType",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyConversionType {
+enum ConversionType {
     Identical,
     Form,
     Linear,
@@ -115,7 +96,7 @@ enum PyConversionType {
     TabVerb,
 }
 
-impl From<&RustConversionType> for PyConversionType {
+impl From<&RustConversionType> for ConversionType {
     fn from(value: &RustConversionType) -> Self {
         match value {
             RustConversionType::Identical => Self::Identical,
@@ -130,16 +111,9 @@ impl From<&RustConversionType> for PyConversionType {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "DataType",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyDataType {
+enum DataType {
     Ubyte,
     Sbyte,
     Uword,
@@ -153,7 +127,7 @@ enum PyDataType {
     Float64Ieee,
 }
 
-impl From<&RustDataType> for PyDataType {
+impl From<&RustDataType> for DataType {
     fn from(value: &RustDataType) -> Self {
         match value {
             RustDataType::Ubyte => Self::Ubyte,
@@ -172,16 +146,9 @@ impl From<&RustDataType> for PyDataType {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "IndexMode",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyIndexMode {
+enum IndexMode {
     AlternateCurves,
     AlternateWithX,
     AlternateWithY,
@@ -189,7 +156,7 @@ enum PyIndexMode {
     RowDir,
 }
 
-impl From<&RustIndexMode> for PyIndexMode {
+impl From<&RustIndexMode> for IndexMode {
     fn from(value: &RustIndexMode) -> Self {
         match value {
             RustIndexMode::AlternateCurves => Self::AlternateCurves,
@@ -202,21 +169,14 @@ impl From<&RustIndexMode> for PyIndexMode {
 }
 
 #[gen_stub_pyclass_enum]
-#[pyclass(
-    name = "UnitType",
-    module = "a2lfile._a2lfile",
-    eq,
-    frozen,
-    hash,
-    skip_from_py_object
-)]
+#[pyclass(eq, frozen, hash, skip_from_py_object)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-enum PyUnitType {
+enum UnitType {
     Derived,
     ExtendedSi,
 }
 
-impl From<&RustUnitType> for PyUnitType {
+impl From<&RustUnitType> for UnitType {
     fn from(value: &RustUnitType) -> Self {
         match value {
             RustUnitType::Derived => Self::Derived,
@@ -226,12 +186,12 @@ impl From<&RustUnitType> for PyUnitType {
 }
 
 #[derive(Clone)]
-struct ModuleLookupContext {
+struct ModuleContext {
     a2l: Arc<RustA2lFile>,
     module_index: usize,
 }
 
-impl ModuleLookupContext {
+impl ModuleContext {
     fn new(a2l: Arc<RustA2lFile>, module_index: usize) -> Self {
         Self { a2l, module_index }
     }
@@ -246,87 +206,82 @@ impl ModuleLookupContext {
             .expect("module index should stay valid for the lifetime of the parsed file")
     }
 
-    fn resolve_measurement(&self, name: &str) -> Option<&RustMeasurement> {
+    fn get_measurement(&self, name: &str) -> Option<&RustMeasurement> {
         self.module().measurement.get(name)
     }
 
-    fn resolve_compu_method(&self, name: &str) -> Option<RustCompuMethod> {
+    fn get_compu_method(&self, name: &str) -> Option<RustCompuMethod> {
         if name == "NO_COMPU_METHOD" {
             return None;
         }
         self.module().compu_method.get(name).cloned()
     }
 
-    fn resolve_unit(&self, name: &str) -> Option<RustUnit> {
+    fn get_unit(&self, name: &str) -> Option<RustUnit> {
         self.module().unit.get(name).cloned()
     }
 
-    fn resolve_table(&self, name: &str) -> Option<ResolvedCompuTable> {
-        // Resolve referenced conversion tables lazily from the shared module data.
+    fn get_compu_table(&self, name: &str) -> Option<CompuTable> {
+        // Look up conversion tables lazily from the shared module data.
         if let Some(compu_tab) = self.module().compu_tab.get(name) {
-            return Some(ResolvedCompuTable::CompuTab(compu_tab.clone()));
+            return Some(CompuTable::CompuTab(compu_tab.clone()));
         }
         if let Some(compu_vtab) = self.module().compu_vtab.get(name) {
-            return Some(ResolvedCompuTable::CompuVtab(compu_vtab.clone()));
+            return Some(CompuTable::CompuVtab(compu_vtab.clone()));
         }
         if let Some(compu_vtab_range) = self.module().compu_vtab_range.get(name) {
-            return Some(ResolvedCompuTable::CompuVtabRange(compu_vtab_range.clone()));
+            return Some(CompuTable::CompuVtabRange(compu_vtab_range.clone()));
         }
         None
     }
 }
 
-enum ResolvedCompuTable {
+enum CompuTable {
     CompuTab(RustCompuTab),
     CompuVtab(RustCompuVtab),
     CompuVtabRange(RustCompuVtabRange),
 }
 
-fn wrap_resolved_table(py: Python<'_>, table: ResolvedCompuTable) -> PyResult<Py<PyAny>> {
+fn wrap_compu_table(py: Python<'_>, table: CompuTable) -> PyResult<Py<PyAny>> {
     match table {
-        ResolvedCompuTable::CompuTab(inner) => {
-            Ok(Py::new(py, PyCompuTabView::new(inner))?.into_any())
-        }
-        ResolvedCompuTable::CompuVtab(inner) => {
-            Ok(Py::new(py, PyCompuVtabView::new(inner))?.into_any())
-        }
-        ResolvedCompuTable::CompuVtabRange(inner) => {
-            Ok(Py::new(py, PyCompuVtabRangeView::new(inner))?.into_any())
+        CompuTable::CompuTab(inner) => Ok(Py::new(py, CompuTab::new(inner))?.into_any()),
+        CompuTable::CompuVtab(inner) => Ok(Py::new(py, CompuVtab::new(inner))?.into_any()),
+        CompuTable::CompuVtabRange(inner) => {
+            Ok(Py::new(py, CompuVtabRange::new(inner))?.into_any())
         }
     }
 }
 
-fn wrap_resolved_table_by_name(
+fn wrap_compu_table_by_name(
     py: Python<'_>,
-    lookup: &ModuleLookupContext,
+    context: &ModuleContext,
     name: &str,
 ) -> PyResult<Option<Py<PyAny>>> {
-    lookup
-        .resolve_table(name)
-        .map(|table| wrap_resolved_table(py, table))
+    context
+        .get_compu_table(name)
+        .map(|table| wrap_compu_table(py, table))
         .transpose()
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "A2lFile", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyA2lFile {
+struct A2lFile {
     inner: Arc<RustA2lFile>,
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyA2lFile {
-    #[gen_stub(override_return_type(type_repr = "list[Module]"))]
+impl A2lFile {
     #[getter]
-    fn modules(&self) -> Vec<PyModuleView> {
+    fn modules(&self) -> Vec<Module> {
         // Expose lightweight module views so Python does not duplicate the full parse tree.
         self.inner
             .project
             .module
             .iter()
             .enumerate()
-            .map(|(module_index, _)| PyModuleView::new(Arc::clone(&self.inner), module_index))
+            .map(|(module_index, _)| Module::new(Arc::clone(&self.inner), module_index))
             .collect()
     }
 
@@ -337,14 +292,14 @@ impl PyA2lFile {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Module", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyModuleView {
+struct Module {
     a2l: Arc<RustA2lFile>,
     module_index: usize,
 }
 
-impl PyModuleView {
+impl Module {
     fn new(a2l: Arc<RustA2lFile>, module_index: usize) -> Self {
         Self { a2l, module_index }
     }
@@ -359,18 +314,15 @@ impl PyModuleView {
             .expect("module index should stay valid for the lifetime of the parsed file")
     }
 
-    fn lookup(&self) -> Arc<ModuleLookupContext> {
-        // Nested views share a lightweight module locator instead of cloned lookup tables.
-        Arc::new(ModuleLookupContext::new(
-            Arc::clone(&self.a2l),
-            self.module_index,
-        ))
+    fn context(&self) -> Arc<ModuleContext> {
+        // Nested views share a lightweight module context instead of cloned lookup tables.
+        Arc::new(ModuleContext::new(Arc::clone(&self.a2l), self.module_index))
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyModuleView {
+impl Module {
     #[getter]
     fn name(&self) -> String {
         self.inner().get_name().to_string()
@@ -381,80 +333,73 @@ impl PyModuleView {
         self.inner().long_identifier.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[Measurement]"))]
     #[getter]
-    fn measurements(&self) -> Vec<PyMeasurementView> {
-        // Reuse one lookup context for the full returned measurement list.
-        let lookup = self.lookup();
+    fn measurements(&self) -> Vec<Measurement> {
+        // Reuse one module context for the full returned measurement list.
+        let context = self.context();
         self.inner()
             .measurement
             .iter()
-            .map(|inner| PyMeasurementView::new(inner.get_name().to_string(), Arc::clone(&lookup)))
+            .map(|inner| Measurement::new(inner.get_name().to_string(), Arc::clone(&context)))
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[CompuMethod]"))]
     #[getter]
-    fn compu_methods(&self) -> Vec<PyCompuMethodView> {
-        // Reuse one lookup context for the full returned conversion list.
-        let lookup = self.lookup();
+    fn compu_methods(&self) -> Vec<CompuMethod> {
+        // Reuse one module context for the full returned conversion list.
+        let context = self.context();
         self.inner()
             .compu_method
             .iter()
             .cloned()
-            .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&lookup)))
+            .map(|inner| CompuMethod::new(inner, Arc::clone(&context)))
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[CompuTab]"))]
     #[getter]
-    fn compu_tabs(&self) -> Vec<PyCompuTabView> {
+    fn compu_tabs(&self) -> Vec<CompuTab> {
         self.inner()
             .compu_tab
             .iter()
             .cloned()
-            .map(PyCompuTabView::new)
+            .map(CompuTab::new)
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[CompuVtab]"))]
     #[getter]
-    fn compu_vtabs(&self) -> Vec<PyCompuVtabView> {
+    fn compu_vtabs(&self) -> Vec<CompuVtab> {
         self.inner()
             .compu_vtab
             .iter()
             .cloned()
-            .map(PyCompuVtabView::new)
+            .map(CompuVtab::new)
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[CompuVtabRange]"))]
     #[getter]
-    fn compu_vtab_ranges(&self) -> Vec<PyCompuVtabRangeView> {
+    fn compu_vtab_ranges(&self) -> Vec<CompuVtabRange> {
         self.inner()
             .compu_vtab_range
             .iter()
             .cloned()
-            .map(PyCompuVtabRangeView::new)
+            .map(CompuVtabRange::new)
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[Unit]"))]
     #[getter]
-    fn units(&self) -> Vec<PyUnitView> {
-        // Reuse one lookup context for the full returned unit list.
-        let lookup = self.lookup();
+    fn units(&self) -> Vec<Unit> {
+        // Reuse one module context for the full returned unit list.
+        let context = self.context();
         self.inner()
             .unit
             .iter()
             .cloned()
-            .map(|inner| PyUnitView::new(inner, Arc::clone(&lookup)))
+            .map(|inner| Unit::new(inner, Arc::clone(&context)))
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[IfData]"))]
     #[getter]
-    fn if_data(&self) -> Vec<PyIfDataView> {
+    fn if_data(&self) -> Vec<IfData> {
         self.inner()
             .if_data
             .iter()
@@ -463,14 +408,13 @@ impl PyModuleView {
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "ByteOrderEnum | None"))]
     #[getter]
-    fn mod_common_byte_order(&self) -> Option<PyByteOrderEnum> {
+    fn mod_common_byte_order(&self) -> Option<ByteOrderEnum> {
         self.inner()
             .mod_common
             .as_ref()
             .and_then(|value| value.byte_order.as_ref())
-            .map(|value| PyByteOrderEnum::from(&value.byte_order))
+            .map(|value| ByteOrderEnum::from(&value.byte_order))
     }
 
     #[getter]
@@ -482,7 +426,6 @@ impl PyModuleView {
             .map(|value| value.identifier.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[int]"))]
     #[getter]
     fn mod_par_addr_epk(&self) -> Vec<u32> {
         self.inner()
@@ -492,38 +435,35 @@ impl PyModuleView {
             .unwrap_or_default()
     }
 
-    #[gen_stub(override_return_type(type_repr = "Measurement | None"))]
-    fn get_measurement(&self, name: &str) -> Option<PyMeasurementView> {
-        // Create lookup state only when returning a nested measurement view.
-        let lookup = self.lookup();
+    fn get_measurement(&self, name: &str) -> Option<Measurement> {
+        // Create context only when returning a nested measurement view.
+        let context = self.context();
         self.inner()
             .measurement
             .get(name)
-            .map(|inner| PyMeasurementView::new(inner.get_name().to_string(), lookup))
+            .map(|inner| Measurement::new(inner.get_name().to_string(), context))
     }
 
-    #[gen_stub(override_return_type(type_repr = "CompuMethod | None"))]
-    fn get_compu_method(&self, name: &str) -> Option<PyCompuMethodView> {
-        // Resolve the conversion from shared module data, then attach the same lookup cache.
-        let lookup = self.lookup();
-        lookup
-            .resolve_compu_method(name)
-            .map(|inner| PyCompuMethodView::new(inner, lookup))
+    fn get_compu_method(&self, name: &str) -> Option<CompuMethod> {
+        // Look up the conversion from shared module data, then attach the same context.
+        let context = self.context();
+        context
+            .get_compu_method(name)
+            .map(|inner| CompuMethod::new(inner, context))
     }
 
-    #[gen_stub(override_return_type(type_repr = "Unit | None"))]
-    fn get_unit(&self, name: &str) -> Option<PyUnitView> {
-        // Resolve the unit from shared module data, then attach the same lookup cache.
-        let lookup = self.lookup();
-        lookup
-            .resolve_unit(name)
-            .map(|inner| PyUnitView::new(inner, lookup))
+    fn get_unit(&self, name: &str) -> Option<Unit> {
+        // Look up the unit from shared module data, then attach the same context.
+        let context = self.context();
+        context
+            .get_unit(name)
+            .map(|inner| Unit::new(inner, context))
     }
 
     #[gen_stub(override_return_type(type_repr = "CompuTab | CompuVtab | CompuVtabRange | None"))]
     fn get_compu_tab(&self, py: Python<'_>, name: &str) -> PyResult<Option<Py<PyAny>>> {
-        let lookup = self.lookup();
-        wrap_resolved_table_by_name(py, &lookup, name)
+        let context = self.context();
+        wrap_compu_table_by_name(py, &context, name)
     }
 
     #[gen_stub(skip)]
@@ -537,29 +477,29 @@ impl PyModuleView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Measurement", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyMeasurementView {
+struct Measurement {
     name: String,
-    lookup: Arc<ModuleLookupContext>,
+    context: Arc<ModuleContext>,
 }
 
-impl PyMeasurementView {
-    fn new(name: String, lookup: Arc<ModuleLookupContext>) -> Self {
-        Self { name, lookup }
+impl Measurement {
+    fn new(name: String, context: Arc<ModuleContext>) -> Self {
+        Self { name, context }
     }
 
     fn inner(&self) -> &RustMeasurement {
-        // Resolve measurement data by name so storing the Python view stays lightweight.
-        self.lookup
-            .resolve_measurement(&self.name)
+        // Look up measurement data by name so storing the Python view stays lightweight.
+        self.context
+            .get_measurement(&self.name)
             .expect("measurement name should stay valid for the lifetime of the parsed file")
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyMeasurementView {
+impl Measurement {
     #[getter]
     fn name(&self) -> String {
         self.name.clone()
@@ -570,10 +510,9 @@ impl PyMeasurementView {
         self.inner().long_identifier.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "DataType"))]
     #[getter]
-    fn datatype(&self) -> PyDataType {
-        PyDataType::from(&self.inner().datatype)
+    fn datatype(&self) -> DataType {
+        DataType::from(&self.inner().datatype)
     }
 
     #[getter]
@@ -581,12 +520,11 @@ impl PyMeasurementView {
         self.inner().conversion.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "CompuMethod | None"))]
     #[getter]
-    fn compu_method(&self) -> Option<PyCompuMethodView> {
-        self.lookup
-            .resolve_compu_method(&self.inner().conversion)
-            .map(|inner| PyCompuMethodView::new(inner, Arc::clone(&self.lookup)))
+    fn compu_method(&self) -> Option<CompuMethod> {
+        self.context
+            .get_compu_method(&self.inner().conversion)
+            .map(|inner| CompuMethod::new(inner, Arc::clone(&self.context)))
     }
 
     #[getter]
@@ -609,18 +547,16 @@ impl PyMeasurementView {
         self.inner().upper_limit
     }
 
-    #[gen_stub(override_return_type(type_repr = "AddrType | None"))]
     #[getter]
-    fn address_type(&self) -> Option<PyAddrType> {
+    fn address_type(&self) -> Option<AddrType> {
         self.inner()
             .address_type
             .as_ref()
-            .map(|value| PyAddrType::from(&value.address_type))
+            .map(|value| AddrType::from(&value.address_type))
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[Annotation]"))]
     #[getter]
-    fn annotation(&self) -> Vec<PyAnnotationView> {
+    fn annotation(&self) -> Vec<Annotation> {
         self.inner()
             .annotation
             .iter()
@@ -639,19 +575,17 @@ impl PyMeasurementView {
         self.inner().bit_mask.as_ref().map(|value| value.mask)
     }
 
-    #[gen_stub(override_return_type(type_repr = "BitOperation | None"))]
     #[getter]
-    fn bit_operation(&self) -> Option<PyBitOperationView> {
+    fn bit_operation(&self) -> Option<BitOperation> {
         self.inner().bit_operation.clone().map(Into::into)
     }
 
-    #[gen_stub(override_return_type(type_repr = "ByteOrderEnum | None"))]
     #[getter]
-    fn byte_order(&self) -> Option<PyByteOrderEnum> {
+    fn byte_order(&self) -> Option<ByteOrderEnum> {
         self.inner()
             .byte_order
             .as_ref()
-            .map(|value| PyByteOrderEnum::from(&value.byte_order))
+            .map(|value| ByteOrderEnum::from(&value.byte_order))
     }
 
     #[getter]
@@ -701,9 +635,8 @@ impl PyMeasurementView {
             .map(|value| value.name_list.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[IfData]"))]
     #[getter]
-    fn if_data(&self) -> Vec<PyIfDataView> {
+    fn if_data(&self) -> Vec<IfData> {
         self.inner()
             .if_data
             .iter()
@@ -712,13 +645,12 @@ impl PyMeasurementView {
             .collect()
     }
 
-    #[gen_stub(override_return_type(type_repr = "IndexMode | None"))]
     #[getter]
-    fn layout(&self) -> Option<PyIndexMode> {
+    fn layout(&self) -> Option<IndexMode> {
         self.inner()
             .layout
             .as_ref()
-            .map(|value| PyIndexMode::from(&value.index_mode))
+            .map(|value| IndexMode::from(&value.index_mode))
     }
 
     #[getter]
@@ -729,9 +661,8 @@ impl PyMeasurementView {
             .map(|value| value.dim_list.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "MaxRefresh | None"))]
     #[getter]
-    fn max_refresh(&self) -> Option<PyMaxRefreshView> {
+    fn max_refresh(&self) -> Option<MaxRefresh> {
         self.inner().max_refresh.clone().map(Into::into)
     }
 
@@ -764,9 +695,8 @@ impl PyMeasurementView {
             .map(|value| value.name.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "SymbolLink | None"))]
     #[getter]
-    fn symbol_link(&self) -> Option<PySymbolLinkView> {
+    fn symbol_link(&self) -> Option<SymbolLink> {
         self.inner().symbol_link.clone().map(Into::into)
     }
 
@@ -789,13 +719,13 @@ impl PyMeasurementView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Annotation", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyAnnotationView {
+struct Annotation {
     inner: RustAnnotation,
 }
 
-impl From<RustAnnotation> for PyAnnotationView {
+impl From<RustAnnotation> for Annotation {
     fn from(inner: RustAnnotation) -> Self {
         Self { inner }
     }
@@ -803,7 +733,7 @@ impl From<RustAnnotation> for PyAnnotationView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyAnnotationView {
+impl Annotation {
     #[getter]
     fn label(&self) -> Option<String> {
         self.inner
@@ -830,17 +760,13 @@ impl PyAnnotationView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "BitOperation",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyBitOperationView {
+struct BitOperation {
     inner: RustBitOperation,
 }
 
-impl From<RustBitOperation> for PyBitOperationView {
+impl From<RustBitOperation> for BitOperation {
     fn from(inner: RustBitOperation) -> Self {
         Self { inner }
     }
@@ -848,7 +774,7 @@ impl From<RustBitOperation> for PyBitOperationView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyBitOperationView {
+impl BitOperation {
     #[getter]
     fn left_shift(&self) -> Option<u32> {
         self.inner.left_shift.as_ref().map(|value| value.bitcount)
@@ -866,13 +792,13 @@ impl PyBitOperationView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "MaxRefresh", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyMaxRefreshView {
+struct MaxRefresh {
     inner: RustMaxRefresh,
 }
 
-impl From<RustMaxRefresh> for PyMaxRefreshView {
+impl From<RustMaxRefresh> for MaxRefresh {
     fn from(inner: RustMaxRefresh) -> Self {
         Self { inner }
     }
@@ -880,7 +806,7 @@ impl From<RustMaxRefresh> for PyMaxRefreshView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyMaxRefreshView {
+impl MaxRefresh {
     #[getter]
     fn scaling_unit(&self) -> u16 {
         self.inner.scaling_unit
@@ -893,13 +819,13 @@ impl PyMaxRefreshView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "SymbolLink", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PySymbolLinkView {
+struct SymbolLink {
     inner: RustSymbolLink,
 }
 
-impl From<RustSymbolLink> for PySymbolLinkView {
+impl From<RustSymbolLink> for SymbolLink {
     fn from(inner: RustSymbolLink) -> Self {
         Self { inner }
     }
@@ -907,7 +833,7 @@ impl From<RustSymbolLink> for PySymbolLinkView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PySymbolLinkView {
+impl SymbolLink {
     #[getter]
     fn symbol_name(&self) -> String {
         self.inner.symbol_name.clone()
@@ -920,13 +846,13 @@ impl PySymbolLinkView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Coeffs", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCoeffsView {
+struct Coeffs {
     inner: RustCoeffs,
 }
 
-impl From<RustCoeffs> for PyCoeffsView {
+impl From<RustCoeffs> for Coeffs {
     fn from(inner: RustCoeffs) -> Self {
         Self { inner }
     }
@@ -934,7 +860,7 @@ impl From<RustCoeffs> for PyCoeffsView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCoeffsView {
+impl Coeffs {
     #[getter]
     fn a(&self) -> f64 {
         self.inner.a
@@ -967,17 +893,13 @@ impl PyCoeffsView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "CoeffsLinear",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCoeffsLinearView {
+struct CoeffsLinear {
     inner: RustCoeffsLinear,
 }
 
-impl From<RustCoeffsLinear> for PyCoeffsLinearView {
+impl From<RustCoeffsLinear> for CoeffsLinear {
     fn from(inner: RustCoeffsLinear) -> Self {
         Self { inner }
     }
@@ -985,7 +907,7 @@ impl From<RustCoeffsLinear> for PyCoeffsLinearView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCoeffsLinearView {
+impl CoeffsLinear {
     #[getter]
     fn a(&self) -> f64 {
         self.inner.a
@@ -998,13 +920,13 @@ impl PyCoeffsLinearView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Formula", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyFormulaView {
+struct Formula {
     inner: RustFormula,
 }
 
-impl From<RustFormula> for PyFormulaView {
+impl From<RustFormula> for Formula {
     fn from(inner: RustFormula) -> Self {
         Self { inner }
     }
@@ -1012,7 +934,7 @@ impl From<RustFormula> for PyFormulaView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyFormulaView {
+impl Formula {
     #[getter]
     fn fx(&self) -> String {
         self.inner.fx.clone()
@@ -1028,17 +950,13 @@ impl PyFormulaView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "UnitConversion",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyUnitConversionView {
+struct UnitConversion {
     inner: RustUnitConversion,
 }
 
-impl From<RustUnitConversion> for PyUnitConversionView {
+impl From<RustUnitConversion> for UnitConversion {
     fn from(inner: RustUnitConversion) -> Self {
         Self { inner }
     }
@@ -1046,7 +964,7 @@ impl From<RustUnitConversion> for PyUnitConversionView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyUnitConversionView {
+impl UnitConversion {
     #[getter]
     fn gradient(&self) -> f64 {
         self.inner.gradient
@@ -1059,13 +977,13 @@ impl PyUnitConversionView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "SiExponents", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PySiExponentsView {
+struct SiExponents {
     inner: RustSiExponents,
 }
 
-impl From<RustSiExponents> for PySiExponentsView {
+impl From<RustSiExponents> for SiExponents {
     fn from(inner: RustSiExponents) -> Self {
         Self { inner }
     }
@@ -1073,7 +991,7 @@ impl From<RustSiExponents> for PySiExponentsView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PySiExponentsView {
+impl SiExponents {
     #[getter]
     fn length(&self) -> i16 {
         self.inner.length
@@ -1111,22 +1029,22 @@ impl PySiExponentsView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "Unit", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyUnitView {
+struct Unit {
     inner: RustUnit,
-    lookup: Arc<ModuleLookupContext>,
+    context: Arc<ModuleContext>,
 }
 
-impl PyUnitView {
-    fn new(inner: RustUnit, lookup: Arc<ModuleLookupContext>) -> Self {
-        Self { inner, lookup }
+impl Unit {
+    fn new(inner: RustUnit, context: Arc<ModuleContext>) -> Self {
+        Self { inner, context }
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyUnitView {
+impl Unit {
     #[getter]
     fn name(&self) -> String {
         self.inner.get_name().to_string()
@@ -1142,10 +1060,9 @@ impl PyUnitView {
         self.inner.display.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "UnitType"))]
     #[getter]
-    fn unit_type(&self) -> PyUnitType {
-        PyUnitType::from(&self.inner.unit_type)
+    fn unit_type(&self) -> UnitType {
+        UnitType::from(&self.inner.unit_type)
     }
 
     #[getter]
@@ -1153,46 +1070,43 @@ impl PyUnitView {
         self.inner.ref_unit.as_ref().map(|value| value.unit.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "Unit | None"))]
     #[getter]
-    fn referenced_unit(&self) -> Option<PyUnitView> {
+    fn referenced_unit(&self) -> Option<Unit> {
         self.inner
             .ref_unit
             .as_ref()
-            .and_then(|value| self.lookup.resolve_unit(&value.unit))
-            .map(|inner| PyUnitView::new(inner, Arc::clone(&self.lookup)))
+            .and_then(|value| self.context.get_unit(&value.unit))
+            .map(|inner| Unit::new(inner, Arc::clone(&self.context)))
     }
 
-    #[gen_stub(override_return_type(type_repr = "SiExponents | None"))]
     #[getter]
-    fn si_exponents(&self) -> Option<PySiExponentsView> {
+    fn si_exponents(&self) -> Option<SiExponents> {
         self.inner.si_exponents.clone().map(Into::into)
     }
 
-    #[gen_stub(override_return_type(type_repr = "UnitConversion | None"))]
     #[getter]
-    fn unit_conversion(&self) -> Option<PyUnitConversionView> {
+    fn unit_conversion(&self) -> Option<UnitConversion> {
         self.inner.unit_conversion.clone().map(Into::into)
     }
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuMethod", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCompuMethodView {
+struct CompuMethod {
     inner: RustCompuMethod,
-    lookup: Arc<ModuleLookupContext>,
+    context: Arc<ModuleContext>,
 }
 
-impl PyCompuMethodView {
-    fn new(inner: RustCompuMethod, lookup: Arc<ModuleLookupContext>) -> Self {
-        Self { inner, lookup }
+impl CompuMethod {
+    fn new(inner: RustCompuMethod, context: Arc<ModuleContext>) -> Self {
+        Self { inner, context }
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCompuMethodView {
+impl CompuMethod {
     #[getter]
     fn name(&self) -> String {
         self.inner.get_name().to_string()
@@ -1203,10 +1117,9 @@ impl PyCompuMethodView {
         self.inner.long_identifier.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "ConversionType"))]
     #[getter]
-    fn conversion_type(&self) -> PyConversionType {
-        PyConversionType::from(&self.inner.conversion_type)
+    fn conversion_type(&self) -> ConversionType {
+        ConversionType::from(&self.inner.conversion_type)
     }
 
     #[getter]
@@ -1219,15 +1132,13 @@ impl PyCompuMethodView {
         self.inner.unit.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "Coeffs | None"))]
     #[getter]
-    fn coeffs(&self) -> Option<PyCoeffsView> {
+    fn coeffs(&self) -> Option<Coeffs> {
         self.inner.coeffs.clone().map(Into::into)
     }
 
-    #[gen_stub(override_return_type(type_repr = "CoeffsLinear | None"))]
     #[getter]
-    fn coeffs_linear(&self) -> Option<PyCoeffsLinearView> {
+    fn coeffs_linear(&self) -> Option<CoeffsLinear> {
         self.inner.coeffs_linear.clone().map(Into::into)
     }
 
@@ -1239,9 +1150,8 @@ impl PyCompuMethodView {
             .map(|value| value.conversion_table.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "Formula | None"))]
     #[getter]
-    fn formula(&self) -> Option<PyFormulaView> {
+    fn formula(&self) -> Option<Formula> {
         self.inner.formula.clone().map(Into::into)
     }
 
@@ -1258,34 +1168,33 @@ impl PyCompuMethodView {
             .map(|value| value.conversion_table.clone())
     }
 
-    #[gen_stub(override_return_type(type_repr = "Unit | None"))]
     #[getter]
-    fn referenced_unit(&self) -> Option<PyUnitView> {
+    fn referenced_unit(&self) -> Option<Unit> {
         self.inner
             .ref_unit
             .as_ref()
-            .and_then(|value| self.lookup.resolve_unit(&value.unit))
-            .map(|inner| PyUnitView::new(inner, Arc::clone(&self.lookup)))
+            .and_then(|value| self.context.get_unit(&value.unit))
+            .map(|inner| Unit::new(inner, Arc::clone(&self.context)))
     }
 
     #[gen_stub(override_return_type(type_repr = "CompuTab | CompuVtab | CompuVtabRange | None"))]
     #[getter]
     fn referenced_table(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         if let Some(compu_tab_ref) = &self.inner.compu_tab_ref {
-            return wrap_resolved_table_by_name(py, &self.lookup, &compu_tab_ref.conversion_table);
+            return wrap_compu_table_by_name(py, &self.context, &compu_tab_ref.conversion_table);
         }
         Ok(None)
     }
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "TabEntry", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyTabEntryView {
+struct TabEntry {
     inner: RustTabEntry,
 }
 
-impl From<RustTabEntry> for PyTabEntryView {
+impl From<RustTabEntry> for TabEntry {
     fn from(inner: RustTabEntry) -> Self {
         Self { inner }
     }
@@ -1293,7 +1202,7 @@ impl From<RustTabEntry> for PyTabEntryView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyTabEntryView {
+impl TabEntry {
     #[getter]
     fn in_val(&self) -> f64 {
         self.inner.in_val
@@ -1306,13 +1215,13 @@ impl PyTabEntryView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "ValuePair", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyValuePairView {
+struct ValuePair {
     inner: RustValuePair,
 }
 
-impl From<RustValuePair> for PyValuePairView {
+impl From<RustValuePair> for ValuePair {
     fn from(inner: RustValuePair) -> Self {
         Self { inner }
     }
@@ -1320,7 +1229,7 @@ impl From<RustValuePair> for PyValuePairView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyValuePairView {
+impl ValuePair {
     #[getter]
     fn in_val(&self) -> f64 {
         self.inner.in_val
@@ -1333,13 +1242,13 @@ impl PyValuePairView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "ValueTriple", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyValueTripleView {
+struct ValueTriple {
     inner: RustValueTriple,
 }
 
-impl From<RustValueTriple> for PyValueTripleView {
+impl From<RustValueTriple> for ValueTriple {
     fn from(inner: RustValueTriple) -> Self {
         Self { inner }
     }
@@ -1347,7 +1256,7 @@ impl From<RustValueTriple> for PyValueTripleView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyValueTripleView {
+impl ValueTriple {
     #[getter]
     fn in_val_min(&self) -> f64 {
         self.inner.in_val_min
@@ -1365,13 +1274,13 @@ impl PyValueTripleView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuTab", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCompuTabView {
+struct CompuTab {
     inner: RustCompuTab,
 }
 
-impl PyCompuTabView {
+impl CompuTab {
     fn new(inner: RustCompuTab) -> Self {
         Self { inner }
     }
@@ -1379,7 +1288,7 @@ impl PyCompuTabView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCompuTabView {
+impl CompuTab {
     #[getter]
     fn name(&self) -> String {
         self.inner.get_name().to_string()
@@ -1390,10 +1299,9 @@ impl PyCompuTabView {
         self.inner.long_identifier.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "ConversionType"))]
     #[getter]
-    fn conversion_type(&self) -> PyConversionType {
-        PyConversionType::from(&self.inner.conversion_type)
+    fn conversion_type(&self) -> ConversionType {
+        ConversionType::from(&self.inner.conversion_type)
     }
 
     #[getter]
@@ -1401,9 +1309,8 @@ impl PyCompuTabView {
         self.inner.number_value_pairs
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[TabEntry]"))]
     #[getter]
-    fn entries(&self) -> Vec<PyTabEntryView> {
+    fn entries(&self) -> Vec<TabEntry> {
         self.inner
             .tab_entry
             .iter()
@@ -1439,13 +1346,13 @@ impl PyCompuTabView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "CompuVtab", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCompuVtabView {
+struct CompuVtab {
     inner: RustCompuVtab,
 }
 
-impl PyCompuVtabView {
+impl CompuVtab {
     fn new(inner: RustCompuVtab) -> Self {
         Self { inner }
     }
@@ -1453,7 +1360,7 @@ impl PyCompuVtabView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCompuVtabView {
+impl CompuVtab {
     #[getter]
     fn name(&self) -> String {
         self.inner.get_name().to_string()
@@ -1464,10 +1371,9 @@ impl PyCompuVtabView {
         self.inner.long_identifier.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "ConversionType"))]
     #[getter]
-    fn conversion_type(&self) -> PyConversionType {
-        PyConversionType::from(&self.inner.conversion_type)
+    fn conversion_type(&self) -> ConversionType {
+        ConversionType::from(&self.inner.conversion_type)
     }
 
     #[getter]
@@ -1475,9 +1381,8 @@ impl PyCompuVtabView {
         self.inner.number_value_pairs
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[ValuePair]"))]
     #[getter]
-    fn entries(&self) -> Vec<PyValuePairView> {
+    fn entries(&self) -> Vec<ValuePair> {
         self.inner
             .value_pairs
             .iter()
@@ -1496,17 +1401,13 @@ impl PyCompuVtabView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "CompuVtabRange",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyCompuVtabRangeView {
+struct CompuVtabRange {
     inner: RustCompuVtabRange,
 }
 
-impl PyCompuVtabRangeView {
+impl CompuVtabRange {
     fn new(inner: RustCompuVtabRange) -> Self {
         Self { inner }
     }
@@ -1514,7 +1415,7 @@ impl PyCompuVtabRangeView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyCompuVtabRangeView {
+impl CompuVtabRange {
     #[getter]
     fn name(&self) -> String {
         self.inner.get_name().to_string()
@@ -1530,9 +1431,8 @@ impl PyCompuVtabRangeView {
         self.inner.number_value_triples
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[ValueTriple]"))]
     #[getter]
-    fn entries(&self) -> Vec<PyValueTripleView> {
+    fn entries(&self) -> Vec<ValueTriple> {
         self.inner
             .value_triples
             .iter()
@@ -1551,13 +1451,13 @@ impl PyCompuVtabRangeView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(name = "IfData", module = "a2lfile._a2lfile", skip_from_py_object)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyIfDataView {
+struct IfData {
     inner: RustIfData,
 }
 
-impl From<RustIfData> for PyIfDataView {
+impl From<RustIfData> for IfData {
     fn from(inner: RustIfData) -> Self {
         Self { inner }
     }
@@ -1565,15 +1465,14 @@ impl From<RustIfData> for PyIfDataView {
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyIfDataView {
+impl IfData {
     #[getter]
     fn valid(&self) -> bool {
         self.inner.ifdata_valid
     }
 
-    #[gen_stub(override_return_type(type_repr = "GenericIfData | None"))]
     #[getter]
-    fn items(&self) -> Option<PyGenericIfDataView> {
+    fn items(&self) -> Option<GenericIfData> {
         self.inner.ifdata_items.clone().map(Into::into)
     }
 
@@ -1588,79 +1487,75 @@ impl PyIfDataView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "GenericIfData",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyGenericIfDataView {
-    inner: GenericIfData,
+struct GenericIfData {
+    inner: RustGenericIfData,
 }
 
-impl From<GenericIfData> for PyGenericIfDataView {
-    fn from(inner: GenericIfData) -> Self {
+impl From<RustGenericIfData> for GenericIfData {
+    fn from(inner: RustGenericIfData) -> Self {
         Self { inner }
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyGenericIfDataView {
+impl GenericIfData {
     #[getter]
     fn kind(&self) -> &'static str {
         match &self.inner {
-            GenericIfData::None => "none",
-            GenericIfData::Char(..) => "char",
-            GenericIfData::Int(..) => "int",
-            GenericIfData::Long(..) => "long",
-            GenericIfData::Int64(..) => "int64",
-            GenericIfData::UChar(..) => "uchar",
-            GenericIfData::UInt(..) => "uint",
-            GenericIfData::ULong(..) => "ulong",
-            GenericIfData::UInt64(..) => "uint64",
-            GenericIfData::Float(..) => "float",
-            GenericIfData::Double(..) => "double",
-            GenericIfData::String(..) => "string",
-            GenericIfData::Array(..) => "array",
-            GenericIfData::EnumItem(..) => "enum_item",
-            GenericIfData::Sequence(..) => "sequence",
-            GenericIfData::TaggedStruct(..) => "tagged_struct",
-            GenericIfData::TaggedUnion(..) => "tagged_union",
-            GenericIfData::Struct(..) => "struct",
-            GenericIfData::Block { .. } => "block",
+            RustGenericIfData::None => "none",
+            RustGenericIfData::Char(..) => "char",
+            RustGenericIfData::Int(..) => "int",
+            RustGenericIfData::Long(..) => "long",
+            RustGenericIfData::Int64(..) => "int64",
+            RustGenericIfData::UChar(..) => "uchar",
+            RustGenericIfData::UInt(..) => "uint",
+            RustGenericIfData::ULong(..) => "ulong",
+            RustGenericIfData::UInt64(..) => "uint64",
+            RustGenericIfData::Float(..) => "float",
+            RustGenericIfData::Double(..) => "double",
+            RustGenericIfData::String(..) => "string",
+            RustGenericIfData::Array(..) => "array",
+            RustGenericIfData::EnumItem(..) => "enum_item",
+            RustGenericIfData::Sequence(..) => "sequence",
+            RustGenericIfData::TaggedStruct(..) => "tagged_struct",
+            RustGenericIfData::TaggedUnion(..) => "tagged_union",
+            RustGenericIfData::Struct(..) => "struct",
+            RustGenericIfData::Block { .. } => "block",
         }
     }
 
     #[getter]
     fn line(&self) -> Option<u32> {
         match &self.inner {
-            GenericIfData::Char(line, _)
-            | GenericIfData::Int(line, _)
-            | GenericIfData::Long(line, _)
-            | GenericIfData::Int64(line, _)
-            | GenericIfData::UChar(line, _)
-            | GenericIfData::UInt(line, _)
-            | GenericIfData::ULong(line, _)
-            | GenericIfData::UInt64(line, _)
-            | GenericIfData::Float(line, _)
-            | GenericIfData::Double(line, _)
-            | GenericIfData::String(line, _)
-            | GenericIfData::EnumItem(line, _)
-            | GenericIfData::Struct(_, line, _)
-            | GenericIfData::Block { line, .. } => Some(*line),
-            GenericIfData::None
-            | GenericIfData::Array(_)
-            | GenericIfData::Sequence(_)
-            | GenericIfData::TaggedStruct(_)
-            | GenericIfData::TaggedUnion(_) => None,
+            RustGenericIfData::Char(line, _)
+            | RustGenericIfData::Int(line, _)
+            | RustGenericIfData::Long(line, _)
+            | RustGenericIfData::Int64(line, _)
+            | RustGenericIfData::UChar(line, _)
+            | RustGenericIfData::UInt(line, _)
+            | RustGenericIfData::ULong(line, _)
+            | RustGenericIfData::UInt64(line, _)
+            | RustGenericIfData::Float(line, _)
+            | RustGenericIfData::Double(line, _)
+            | RustGenericIfData::String(line, _)
+            | RustGenericIfData::EnumItem(line, _)
+            | RustGenericIfData::Struct(_, line, _)
+            | RustGenericIfData::Block { line, .. } => Some(*line),
+            RustGenericIfData::None
+            | RustGenericIfData::Array(_)
+            | RustGenericIfData::Sequence(_)
+            | RustGenericIfData::TaggedStruct(_)
+            | RustGenericIfData::TaggedUnion(_) => None,
         }
     }
 
     #[getter]
     fn incfile(&self) -> Option<String> {
         match &self.inner {
-            GenericIfData::Struct(incfile, _, _) | GenericIfData::Block { incfile, .. } => {
+            RustGenericIfData::Struct(incfile, _, _) | RustGenericIfData::Block { incfile, .. } => {
                 incfile.clone()
             }
             _ => None,
@@ -1670,65 +1565,60 @@ impl PyGenericIfDataView {
     #[getter]
     fn is_hex(&self) -> Option<bool> {
         match &self.inner {
-            GenericIfData::Char(_, (_, is_hex))
-            | GenericIfData::Int(_, (_, is_hex))
-            | GenericIfData::Long(_, (_, is_hex))
-            | GenericIfData::Int64(_, (_, is_hex))
-            | GenericIfData::UChar(_, (_, is_hex))
-            | GenericIfData::UInt(_, (_, is_hex))
-            | GenericIfData::ULong(_, (_, is_hex))
-            | GenericIfData::UInt64(_, (_, is_hex)) => Some(*is_hex),
+            RustGenericIfData::Char(_, (_, is_hex))
+            | RustGenericIfData::Int(_, (_, is_hex))
+            | RustGenericIfData::Long(_, (_, is_hex))
+            | RustGenericIfData::Int64(_, (_, is_hex))
+            | RustGenericIfData::UChar(_, (_, is_hex))
+            | RustGenericIfData::UInt(_, (_, is_hex))
+            | RustGenericIfData::ULong(_, (_, is_hex))
+            | RustGenericIfData::UInt64(_, (_, is_hex)) => Some(*is_hex),
             _ => None,
         }
     }
 
-    #[gen_stub(override_return_type(type_repr = "typing.Any | None", imports = ("typing",)))]
     #[getter]
     fn value(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         match &self.inner {
-            GenericIfData::None => Ok(py.None()),
-            GenericIfData::Char(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::Int(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::Long(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::Int64(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::UChar(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::UInt(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::ULong(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::UInt64(_, (value, _)) => (*value).into_py_any(py),
-            GenericIfData::Float(_, value) => (*value).into_py_any(py),
-            GenericIfData::Double(_, value) => (*value).into_py_any(py),
-            GenericIfData::String(_, value) => value.clone().into_py_any(py),
-            GenericIfData::EnumItem(_, value) => value.clone().into_py_any(py),
-            GenericIfData::Array(_)
-            | GenericIfData::Sequence(_)
-            | GenericIfData::TaggedStruct(_)
-            | GenericIfData::TaggedUnion(_)
-            | GenericIfData::Struct(_, _, _)
-            | GenericIfData::Block { .. } => Ok(py.None()),
+            RustGenericIfData::None => Ok(py.None()),
+            RustGenericIfData::Char(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::Int(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::Long(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::Int64(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::UChar(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::UInt(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::ULong(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::UInt64(_, (value, _)) => (*value).into_py_any(py),
+            RustGenericIfData::Float(_, value) => (*value).into_py_any(py),
+            RustGenericIfData::Double(_, value) => (*value).into_py_any(py),
+            RustGenericIfData::String(_, value) => value.clone().into_py_any(py),
+            RustGenericIfData::EnumItem(_, value) => value.clone().into_py_any(py),
+            RustGenericIfData::Array(_)
+            | RustGenericIfData::Sequence(_)
+            | RustGenericIfData::TaggedStruct(_)
+            | RustGenericIfData::TaggedUnion(_)
+            | RustGenericIfData::Struct(_, _, _)
+            | RustGenericIfData::Block { .. } => Ok(py.None()),
         }
     }
 
-    #[gen_stub(override_return_type(type_repr = "list[GenericIfData] | None"))]
     #[getter]
-    fn items(&self) -> Option<Vec<PyGenericIfDataView>> {
+    fn items(&self) -> Option<Vec<GenericIfData>> {
         match &self.inner {
-            GenericIfData::Array(items)
-            | GenericIfData::Sequence(items)
-            | GenericIfData::Struct(_, _, items)
-            | GenericIfData::Block { items, .. } => {
+            RustGenericIfData::Array(items)
+            | RustGenericIfData::Sequence(items)
+            | RustGenericIfData::Struct(_, _, items)
+            | RustGenericIfData::Block { items, .. } => {
                 Some(items.iter().cloned().map(Into::into).collect())
             }
             _ => None,
         }
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "dict[str, list[GenericIfDataTaggedItem]] | None"
-    ))]
     #[getter]
-    fn tagged_items(&self) -> Option<HashMap<String, Vec<PyGenericIfDataTaggedItemView>>> {
+    fn tagged_items(&self) -> Option<HashMap<String, Vec<GenericIfDataTaggedItem>>> {
         match &self.inner {
-            GenericIfData::TaggedStruct(items) | GenericIfData::TaggedUnion(items) => Some(
+            RustGenericIfData::TaggedStruct(items) | RustGenericIfData::TaggedUnion(items) => Some(
                 items
                     .iter()
                     .map(|(tag, values)| {
@@ -1744,10 +1634,9 @@ impl PyGenericIfDataView {
     }
 
     /// Return direct tagged entries for `tag` without converting the complete tag map.
-    #[gen_stub(override_return_type(type_repr = "list[GenericIfDataTaggedItem] | None"))]
-    fn get_tagged_items_by(&self, tag: &str) -> Option<Vec<PyGenericIfDataTaggedItemView>> {
+    fn get_tagged_items_by(&self, tag: &str) -> Option<Vec<GenericIfDataTaggedItem>> {
         match &self.inner {
-            GenericIfData::TaggedStruct(items) | GenericIfData::TaggedUnion(items) => {
+            RustGenericIfData::TaggedStruct(items) | RustGenericIfData::TaggedUnion(items) => {
                 // Look up only the requested direct child instead of converting the complete map.
                 Some(
                     items
@@ -1770,33 +1659,28 @@ impl PyGenericIfDataView {
 }
 
 #[gen_stub_pyclass]
-#[pyclass(
-    name = "GenericIfDataTaggedItem",
-    module = "a2lfile._a2lfile",
-    skip_from_py_object
-)]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
-struct PyGenericIfDataTaggedItemView {
-    inner: GenericIfDataTaggedItem,
+struct GenericIfDataTaggedItem {
+    inner: RustGenericIfDataTaggedItem,
 }
 
-impl From<GenericIfDataTaggedItem> for PyGenericIfDataTaggedItemView {
-    fn from(inner: GenericIfDataTaggedItem) -> Self {
+impl From<RustGenericIfDataTaggedItem> for GenericIfDataTaggedItem {
+    fn from(inner: RustGenericIfDataTaggedItem) -> Self {
         Self { inner }
     }
 }
 
 #[gen_stub_pymethods]
 #[pymethods]
-impl PyGenericIfDataTaggedItemView {
+impl GenericIfDataTaggedItem {
     #[getter]
     fn tag(&self) -> String {
         self.inner.tag.clone()
     }
 
-    #[gen_stub(override_return_type(type_repr = "GenericIfData"))]
     #[getter]
-    fn data(&self) -> PyGenericIfDataView {
+    fn data(&self) -> GenericIfData {
         self.inner.data.clone().into()
     }
 
@@ -1826,9 +1710,9 @@ impl PyGenericIfDataTaggedItemView {
 
 #[gen_stub_pyfunction]
 #[pyfunction(signature = (path, a2ml_spec=None))]
-fn load(path: String, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
+fn load(path: String, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
     let (a2l_file, _) = a2lfile_core::load(path, a2ml_spec, false).map_err(map_a2l_error)?;
-    Ok(PyA2lFile {
+    Ok(A2lFile {
         // Keep the parsed file shared across Python views instead of duplicating modules.
         inner: Arc::new(a2l_file),
     })
@@ -1836,51 +1720,63 @@ fn load(path: String, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
 
 #[gen_stub_pyfunction]
 #[pyfunction(signature = (text, a2ml_spec=None))]
-fn load_from_string(text: &str, a2ml_spec: Option<String>) -> PyResult<PyA2lFile> {
+fn load_from_string(text: &str, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
     let (a2l_file, _) =
         a2lfile_core::load_from_string(text, a2ml_spec, false).map_err(map_a2l_error)?;
-    Ok(PyA2lFile {
+    Ok(A2lFile {
         // Keep the parsed file shared across Python views instead of duplicating modules.
         inner: Arc::new(a2l_file),
     })
 }
 
 #[pymodule]
-fn _a2lfile(m: &Bound<'_, PyModuleType>) -> PyResult<()> {
+fn _a2lfile(m: &Bound<'_, PythonModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_function(wrap_pyfunction!(load, m)?)?;
     m.add_function(wrap_pyfunction!(load_from_string, m)?)?;
     // Register the typed A2L value domains before views return their members.
-    m.add_class::<PyAddrType>()?;
-    m.add_class::<PyA2lFile>()?;
-    m.add_class::<PyAnnotationView>()?;
-    m.add_class::<PyBitOperationView>()?;
-    m.add_class::<PyCoeffsView>()?;
-    m.add_class::<PyCoeffsLinearView>()?;
-    m.add_class::<PyByteOrderEnum>()?;
-    m.add_class::<PyCompuMethodView>()?;
-    m.add_class::<PyCompuTabView>()?;
-    m.add_class::<PyCompuVtabView>()?;
-    m.add_class::<PyCompuVtabRangeView>()?;
-    m.add_class::<PyConversionType>()?;
-    m.add_class::<PyDataType>()?;
-    m.add_class::<PyFormulaView>()?;
-    m.add_class::<PyGenericIfDataView>()?;
-    m.add_class::<PyGenericIfDataTaggedItemView>()?;
-    m.add_class::<PyIfDataView>()?;
-    m.add_class::<PyIndexMode>()?;
-    m.add_class::<PyMaxRefreshView>()?;
-    m.add_class::<PyMeasurementView>()?;
-    m.add_class::<PyModuleView>()?;
-    m.add_class::<PySiExponentsView>()?;
-    m.add_class::<PySymbolLinkView>()?;
-    m.add_class::<PyTabEntryView>()?;
-    m.add_class::<PyUnitConversionView>()?;
-    m.add_class::<PyUnitType>()?;
-    m.add_class::<PyUnitView>()?;
-    m.add_class::<PyValuePairView>()?;
-    m.add_class::<PyValueTripleView>()?;
+    m.add_class::<AddrType>()?;
+    m.add_class::<A2lFile>()?;
+    m.add_class::<Annotation>()?;
+    m.add_class::<BitOperation>()?;
+    m.add_class::<Coeffs>()?;
+    m.add_class::<CoeffsLinear>()?;
+    m.add_class::<ByteOrderEnum>()?;
+    m.add_class::<CompuMethod>()?;
+    m.add_class::<CompuTab>()?;
+    m.add_class::<CompuVtab>()?;
+    m.add_class::<CompuVtabRange>()?;
+    m.add_class::<ConversionType>()?;
+    m.add_class::<DataType>()?;
+    m.add_class::<Formula>()?;
+    m.add_class::<GenericIfData>()?;
+    m.add_class::<GenericIfDataTaggedItem>()?;
+    m.add_class::<IfData>()?;
+    m.add_class::<IndexMode>()?;
+    m.add_class::<MaxRefresh>()?;
+    m.add_class::<Measurement>()?;
+    m.add_class::<Module>()?;
+    m.add_class::<SiExponents>()?;
+    m.add_class::<SymbolLink>()?;
+    m.add_class::<TabEntry>()?;
+    m.add_class::<UnitConversion>()?;
+    m.add_class::<UnitType>()?;
+    m.add_class::<Unit>()?;
+    m.add_class::<ValuePair>()?;
+    m.add_class::<ValueTriple>()?;
     Ok(())
 }
 
-define_stub_info_gatherer!(stub_info);
+/// Build stub metadata for the native module's module-stub layout.
+pub fn stub_info() -> pyo3_stub_gen::Result<StubInfo> {
+    let python_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("python")
+        .join("a2lfile");
+
+    StubInfo::from_project_root(
+        "_a2lfile".to_string(),
+        python_root,
+        false,
+        StubGenConfig::default(),
+    )
+}
