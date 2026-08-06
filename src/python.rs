@@ -628,11 +628,12 @@ impl Measurement {
     }
 
     #[getter]
-    fn function_list(&self) -> Option<Vec<String>> {
+    fn function_list(&self) -> Vec<String> {
         self.inner()
             .function_list
             .as_ref()
             .map(|value| value.name_list.clone())
+            .unwrap_or_default()
     }
 
     #[getter]
@@ -654,11 +655,12 @@ impl Measurement {
     }
 
     #[getter]
-    fn matrix_dim(&self) -> Option<Vec<u16>> {
+    fn matrix_dim(&self) -> Vec<u16> {
         self.inner()
             .matrix_dim
             .as_ref()
             .map(|value| value.dim_list.clone())
+            .unwrap_or_default()
     }
 
     #[getter]
@@ -701,11 +703,12 @@ impl Measurement {
     }
 
     #[getter]
-    fn r#virtual(&self) -> Option<Vec<String>> {
+    fn r#virtual(&self) -> Vec<String> {
         self.inner()
             .var_virtual
             .as_ref()
             .map(|value| value.measuring_channel_list.clone())
+            .unwrap_or_default()
     }
 
     #[gen_stub(skip)]
@@ -751,11 +754,12 @@ impl Annotation {
     }
 
     #[getter]
-    fn text_lines(&self) -> Option<Vec<String>> {
+    fn text_lines(&self) -> Vec<String> {
         self.inner
             .annotation_text
             .as_ref()
             .map(|value| value.annotation_text_list.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -1603,52 +1607,48 @@ impl GenericIfData {
     }
 
     #[getter]
-    fn items(&self) -> Option<Vec<GenericIfData>> {
+    fn items(&self) -> Vec<GenericIfData> {
         match &self.inner {
             RustGenericIfData::Array(items)
             | RustGenericIfData::Sequence(items)
             | RustGenericIfData::Struct(_, _, items)
             | RustGenericIfData::Block { items, .. } => {
-                Some(items.iter().cloned().map(Into::into).collect())
+                items.iter().cloned().map(Into::into).collect()
             }
-            _ => None,
+            _ => Vec::new(),
         }
     }
 
     #[getter]
-    fn tagged_items(&self) -> Option<HashMap<String, Vec<GenericIfDataTaggedItem>>> {
+    fn tagged_items(&self) -> HashMap<String, Vec<GenericIfDataTaggedItem>> {
         match &self.inner {
-            RustGenericIfData::TaggedStruct(items) | RustGenericIfData::TaggedUnion(items) => Some(
-                items
-                    .iter()
-                    .map(|(tag, values)| {
-                        (
-                            tag.clone(),
-                            values.iter().cloned().map(Into::into).collect(),
-                        )
-                    })
-                    .collect(),
-            ),
-            _ => None,
+            RustGenericIfData::TaggedStruct(items) | RustGenericIfData::TaggedUnion(items) => items
+                .iter()
+                .map(|(tag, values)| {
+                    (
+                        tag.clone(),
+                        values.iter().cloned().map(Into::into).collect(),
+                    )
+                })
+                .collect(),
+            _ => HashMap::new(),
         }
     }
 
     /// Return direct tagged entries for `tag` without converting the complete tag map.
-    fn get_tagged_items_by(&self, tag: &str) -> Option<Vec<GenericIfDataTaggedItem>> {
+    fn get_tagged_items_by(&self, tag: &str) -> Vec<GenericIfDataTaggedItem> {
         match &self.inner {
             RustGenericIfData::TaggedStruct(items) | RustGenericIfData::TaggedUnion(items) => {
                 // Look up only the requested direct child instead of converting the complete map.
-                Some(
-                    items
-                        .get(tag)
-                        .into_iter()
-                        .flatten()
-                        .cloned()
-                        .map(Into::into)
-                        .collect(),
-                )
+                items
+                    .get(tag)
+                    .into_iter()
+                    .flatten()
+                    .cloned()
+                    .map(Into::into)
+                    .collect()
             }
-            _ => None,
+            _ => Vec::new(),
         }
     }
 

@@ -87,6 +87,9 @@ ASAP2_VERSION 1 71
           "line two"
         /end ANNOTATION_TEXT
       /end ANNOTATION
+      /begin ANNOTATION
+        ANNOTATION_LABEL "without text"
+      /end ANNOTATION
       BIT_MASK 255
       /begin BIT_OPERATION
         LEFT_SHIFT 1
@@ -227,6 +230,9 @@ def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
     assert measurement.resolution == 1
     assert measurement.lower_limit == 0.0
     assert measurement.upper_limit == 255.0
+    assert measurement.function_list == []
+    assert measurement.matrix_dim == []
+    assert measurement.virtual == []
 
     module_if_data = module.if_data[0]
     assert module_if_data.valid is True
@@ -241,14 +247,18 @@ def test_load_from_string_exposes_modules_measurements_and_if_data() -> None:
     assert xcp_item.tag == "XCP"
     assert xcp_item.is_block is True
 
-    assert [item.tag for item in tagged_root.get_tagged_items_by("XCP") or []] == ["XCP"]
+    assert [item.tag for item in tagged_root.get_tagged_items_by("XCP")] == ["XCP"]
     assert tagged_root.get_tagged_items_by("NOT_PRESENT") == []
-    assert module_if_data.items.get_tagged_items_by("XCP") is None
+    assert module_if_data.items.tagged_items == {}
+    assert module_if_data.items.get_tagged_items_by("XCP") == []
 
     protocol_layer = xcp_item.data.items[0].tagged_items["PROTOCOL_LAYER"][0]
     assert protocol_layer.tag == "PROTOCOL_LAYER"
     assert protocol_layer.data.items[0].kind == "uchar"
     assert protocol_layer.data.items[0].value == 1
+    assert protocol_layer.data.items[0].items == []
+    assert protocol_layer.data.items[0].tagged_items == {}
+    assert protocol_layer.data.items[0].get_tagged_items_by("XCP") == []
 
     measurement_if_data = measurement.if_data[0]
     protocol_layer = measurement_if_data.items.items[0].tagged_items["XCP"][0]
@@ -294,6 +304,7 @@ def test_measurement_dependencies_are_resolved_cleanly() -> None:
     assert temp_linear.annotation[0].label == "sensor"
     assert temp_linear.annotation[0].origin == "bindings-test"
     assert temp_linear.annotation[0].text_lines == ["line one", "line two"]
+    assert temp_linear.annotation[1].text_lines == []
     assert temp_linear.bit_mask == 255
     assert temp_linear.bit_operation.left_shift == 1
     assert temp_linear.bit_operation.right_shift == 2
