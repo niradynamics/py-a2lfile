@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 jobs:
+  # Build each stable ABI wheel once with the minimum supported Python version.
   linux:
     name: Linux Wheel
     runs-on: ubuntu-22.04
@@ -30,7 +31,7 @@ jobs:
         with:
           target: x86_64-unknown-linux-gnu
           manylinux: "2014"
-          args: --release --out dist -i python3.12
+          args: --locked --release --out dist -i python3.12
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -59,7 +60,7 @@ jobs:
         with:
           target: aarch64-unknown-linux-gnu
           manylinux: "2014"
-          args: --release --out dist -i python3.12
+          args: --locked --release --out dist -i python3.12
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -87,7 +88,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: x64
-          args: --release --out dist -i python
+          args: --locked --release --out dist -i python
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -136,7 +137,7 @@ jobs:
       id-token: write
     environment:
       name: pypi
-      url: https://pypi.org/project/nira-py-a2lfile/
+      url: https://pypi.org/project/py-a2lfile/
 
     steps:
       - name: Download build artifacts

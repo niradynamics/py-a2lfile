@@ -7,7 +7,7 @@ name = "py-a2lfile"
 dynamic = ["version"]
 description = "Parse-only Python bindings for the a2lfile Rust crate"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12,<3.15"
 authors = [
     { name = "Max Idermark", email = "max@idermark.com" },
 ]

@@ -16,7 +16,8 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 a2lfile_core = { package = "a2lfile", version = "=3.5.0", default-features = false }
-pyo3 = { version = "0.29.0", features = ["extension-module"] }
+# Build against the stable CPython ABI available from Python 3.12 onward.
+pyo3 = { version = "0.29.3", features = ["extension-module", "abi3-py312"] }
 pyo3-stub-gen = { version = "0.23.0", default-features = false, features = ["infer_signature"] }
 
 [[bin]]
