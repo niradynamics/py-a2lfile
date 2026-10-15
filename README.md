@@ -17,13 +17,13 @@
 - Access detailed measurement metadata such as annotations, bit operations, addresses, refresh information, symbol links, and virtual channels
 - Stable and fast parsing backed by the Rust `a2lfile` library
 - Typed distribution with `_a2lfile.pyi` and `py.typed`
-- Intended for CPython 3.12
+- Supports CPython 3.12, 3.13, and 3.14 using stable ABI (`abi3`) wheels
 
 ## Limitations
 
 - Parse-only API; this package does not currently provide editing or write-back support
 - Intentionally small wrapper surface focused on inspection rather than full ASAP2 authoring workflows
-- Currently targeted at CPython 3.12 rather than a broad ABI-compatible interpreter matrix
+- Free-threaded Python builds are not covered by the published `abi3` wheels
 
 ## Installation
 
@@ -32,6 +32,10 @@ pip install py-a2lfile
 ```
 
 The package is installed from PyPI as `py-a2lfile`, but imported in Python as `a2lfile`.
+
+Releases provide a single `cp312-abi3` wheel per platform for standard CPython
+3.12–3.14 on Linux x86_64, Linux aarch64, and Windows x64. Other platforms
+require a source build with Rust installed.
 
 ## Example
 
