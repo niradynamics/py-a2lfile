@@ -1710,8 +1710,10 @@ impl GenericIfDataTaggedItem {
 
 #[gen_stub_pyfunction]
 #[pyfunction(signature = (path, a2ml_spec=None))]
-fn load(path: String, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
-    let (a2l_file, _) = a2lfile_core::load(path, a2ml_spec, false).map_err(map_a2l_error)?;
+fn load(py: Python<'_>, path: String, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
+    let (a2l_file, _) = py
+        .detach(move || a2lfile_core::load(path, a2ml_spec, false))
+        .map_err(map_a2l_error)?;
     Ok(A2lFile {
         // Keep the parsed file shared across Python views instead of duplicating modules.
         inner: Arc::new(a2l_file),
@@ -1720,9 +1722,10 @@ fn load(path: String, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
 
 #[gen_stub_pyfunction]
 #[pyfunction(signature = (text, a2ml_spec=None))]
-fn load_from_string(text: &str, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
-    let (a2l_file, _) =
-        a2lfile_core::load_from_string(text, a2ml_spec, false).map_err(map_a2l_error)?;
+fn load_from_string(py: Python<'_>, text: String, a2ml_spec: Option<String>) -> PyResult<A2lFile> {
+    let (a2l_file, _) = py
+        .detach(move || a2lfile_core::load_from_string(&text, a2ml_spec, false))
+        .map_err(map_a2l_error)?;
     Ok(A2lFile {
         // Keep the parsed file shared across Python views instead of duplicating modules.
         inner: Arc::new(a2l_file),
